@@ -7,9 +7,9 @@ plantedCarrot1,blocks,Farming,,,Carrot Seeds
 plantedCarrot2,blocks,Farming,,,Carrot (Growing)
 plantedCarrot3Harvest,blocks,Farming,,,Carrot Plant
 plantedCarrot3HarvestPlayer,blocks,Farming,,,Carrot Plant
-plantedCarrot3HarvestDesc,blocks,Farming,,,"A carrot plant, ready to harvest."
+plantedCarrot3HarvestDesc,blocks,Farming,,,Carrot
 plantedWheat1,blocks,Farming,,,Wheat Seeds
 plantedWheat2,blocks,Farming,,,Wheat (Growing)
 plantedWheat3Harvest,blocks,Farming,,,Wheat Plant
 plantedWheat3HarvestPlayer,blocks,Farming,,,Wheat Plant
-plantedWheat3HarvestDesc,blocks,Farming,,,"A wheat plant, ready to harvest."
+plantedWheat3HarvestDesc,blocks,Farming,,,Wheat
