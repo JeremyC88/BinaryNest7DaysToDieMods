@@ -56,17 +56,29 @@ namespace BinaryNest.Editor
             ("Carrot", "CarrotSeedling", "CarrotSeedling"),
             ("Carrot", "CarrotGrowth",   "CarrotGrowth"),
             ("Carrot", "CarrotHarvest",  "CarrotHarvest"),
+            ("Wheat",  "WheatSeedling",  "WheatSeedling"),
+            ("Wheat",  "WheatGrowth",    "WheatGrowth"),
+            ("Wheat",  "WheatHarvest",   "WheatHarvest"),
         };
 
-        // Material name in the FBX -> colour, smoothness and optional texture
-        // (relative to Assets/Farming/<crop>/Textures). Colours match the
-        // Blender build script (sRGB). Textured materials use white so the
+        // Per crop: material name in the FBX -> colour, smoothness and optional
+        // texture (relative to Assets/Farming/<crop>/Textures). Colours match
+        // the Blender build scripts (sRGB). Textured materials use white so the
         // texture's own colours show.
-        static readonly Dictionary<string, (Color color, float smoothness, string texture)> MaterialDefs = new()
+        static readonly Dictionary<string, Dictionary<string, (Color color, float smoothness, string texture)>> MaterialDefs = new()
         {
-            ["CarrotLeaf"]  = (Color.white, 0.20f, "CarrotLeaf.png"),
-            ["CarrotStalk"] = (new Color(0.17f, 0.29f, 0.10f), 0.10f, null),
-            ["CarrotRoot"]  = (new Color(0.80f, 0.32f, 0.05f), 0.30f, null),
+            ["Carrot"] = new()
+            {
+                ["CarrotLeaf"]  = (Color.white, 0.20f, "CarrotLeaf.png"),
+                ["CarrotStalk"] = (new Color(0.17f, 0.29f, 0.10f), 0.10f, null),
+                ["CarrotRoot"]  = (new Color(0.80f, 0.32f, 0.05f), 0.30f, null),
+            },
+            ["Wheat"] = new()
+            {
+                ["WheatPlant"]      = (Color.white, 0.15f, "WheatPlant.png"),
+                ["WheatGrainGreen"] = (new Color(0.45f, 0.53f, 0.23f), 0.25f, null),
+                ["WheatGrainGold"]  = (new Color(0.80f, 0.62f, 0.30f), 0.30f, null),
+            },
         };
 
         [MenuItem("BinaryNest/Build Farming Bundle")]
@@ -218,7 +230,7 @@ namespace BinaryNest.Editor
             importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
             importer.materialLocation = ModelImporterMaterialLocation.InPrefab;
 
-            foreach (var (name, def) in MaterialDefs)
+            foreach (var (name, def) in MaterialDefs[crop])
             {
                 var mat = GetOrCreateMaterial(crop, name, def.color, def.smoothness, def.texture);
                 importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), name), mat);

@@ -2,7 +2,7 @@
 
 Rules for the inventory icons and 3D models we make, so new crops (wheat next) match the carrot. These come from what worked in game and from feedback on the carrot.
 
-Reference implementation: [build_carrot.py](../../art/farming/carrot/build_carrot.py) (Blender) and [FarmingBundleBuilder.cs](../../unity/BinaryNestModAssets/Assets/Editor/FarmingBundleBuilder.cs) (Unity).
+Reference implementations: [build_carrot.py](../../art/farming/carrot/build_carrot.py) and [build_wheat.py](../../art/farming/wheat/build_wheat.py) (Blender), and [FarmingBundleBuilder.cs](../../unity/BinaryNestModAssets/Assets/Editor/FarmingBundleBuilder.cs) (Unity).
 
 ---
 
@@ -17,18 +17,22 @@ Icons are shown small: inventory slots, the creative menu, crafting skill rows a
 | Size | **160 × 160** PNG, RGBA, **transparent background** |
 | File name | Exactly the item or block name, e.g. `foodCropCarrot.png`, `plantedCarrot1.png` |
 | Location | `Mods/BinaryNest_Farming/UIAtlases/ItemIconAtlas/` |
-| XML | No `CustomIcon` on the item itself. Remove any placeholder `CustomIcon` / `CustomIconTint` lines once the PNG exists. |
+| XML | No `CustomIcon` on the item itself. Remove any placeholder `CustomIcon` / `CustomIconTint` lines once the PNG exists. If the item `Extends` a vanilla item that sets `CustomIcon` (e.g. wheat extends cotton), add `param1="CustomIcon"` to the `Extends` property so the icon isn't inherited. |
 | Growing and grown blocks | Point at the seed icon with `CustomIcon` (e.g. `plantedCarrot1`), the same way vanilla does |
 
 ### Composition
 
 1. **One clear subject that fills the square.** Frame to the model's actual vertices, not its bounding box, with about 6% margin (`ortho_scale = extent × 1.06`). A rotated bounding box is far bigger than the object and leaves the subject tiny.
 2. **Produce: a single item on a diagonal,** like the vanilla corn icon: tip or base at the bottom left, top at the upper right. Show **one** item, not a group, and make it big. Keep leafy tops short so the produce itself dominates.
-3. **Seeds: a heap of seeds with the crop in front,** like the vanilla seed icons (e.g. blueberry seeds with blueberries):
-   - The heap is the main shape and fills most of the frame.
-   - Seeds are small and in a **colour and shape specific to the crop**, so they don't look like other seeds.
-   - One small piece of the crop lies **side-on in front** so its shape reads clearly. Don't point it at the camera, or it turns into a blob. For the carrot: green top on the left, **point on the right**.
-   - Keep the crop's leaves short so they don't spread across the frame.
+3. **Seeds: seeds plus the crop,** like the vanilla seed icons. Two styles, depending on the seed:
+   - **Big seeds (wheat, and anything grain or bean sized): the corn-seed style.** About 20–25 large, individually readable seeds in a loose cluster, a few stacked in the middle, like the vanilla `plantedCorn1` icon. The crop lies **diagonally behind** the cluster (stalk lower left, top upper right), clearly visible and not hidden in a corner.
+   - **Tiny seeds (carrot): a heap.** A heap of many small seeds fills most of the frame, with one small piece of the crop lying **side-on in front** (carrot: green top on the left, **point on the right**).
+   - In both styles:
+     - Seeds use a **colour and shape specific to the crop**, so they don't look like other seeds.
+     - **The seeds and the crop must contrast in colour.** Wheat grains are reddish brown and the ear is straw gold. Same-coloured seeds and crop blur into one blob at slot size.
+     - Don't point the crop at the camera, or it turns into a blob. Show it side-on.
+     - Keep leaves and stalks short so they don't stretch the frame and shrink the seeds.
+     - Very pale colours wash out to white under the icon lights. Use mid tones.
 4. **Camera:** orthographic. Produce is viewed from nearly straight on (slightly above). Seed heaps are viewed from about 30–35° above, so the heap has volume.
 
 ### Telling seeds apart
@@ -42,7 +46,8 @@ Check new seed colours against vanilla and our existing seeds:
 | Cotton (vanilla) | White fluff with dark seeds |
 | Coffee (vanilla) | Dark brown beans |
 | **Carrot (ours)** | **Pale tan, round** |
-| Wheat (planned) | Suggest **golden, elongated grains**, clearly different from carrot's round tan seeds |
+| Corn (vanilla) | Bright yellow kernels, large |
+| **Wheat (ours)** | **Reddish-brown oval grains, large (corn-seed style), with a straw-gold ear behind** |
 
 ### Lighting and colour
 
@@ -87,6 +92,7 @@ Budget for the grown stage's LOD0 against vanilla crops:
 | Potato (vanilla) | 396 (no LODs) |
 | Blueberry (vanilla) | 2,000 |
 | **Carrot (ours)** | **4,714** (LOD1 2,654, LOD2 826) |
+| **Wheat (ours)** | **5,664** (LOD1 2,976, LOD2 576) |
 | Cotton (vanilla) | 5,602 |
 | Pumpkin (vanilla) | 12,538 |
 | Yucca / Hops (vanilla) | 14,090 / 15,188 |
@@ -97,7 +103,7 @@ Stay at or under cotton for a low, leafy crop. Wheat is tall and dense, so expec
 
 ## 3. Unity and in-game rules (handled by the builder)
 
-These are already automated in `FarmingBundleBuilder.cs`. New crops only need adding to its `Models` and `MaterialDefs` lists.
+These are already automated in `FarmingBundleBuilder.cs`. A new crop only needs adding to its `Models` list and a new `MaterialDefs["<Crop>"]` entry.
 
 - **Prefab root tag `T_Block`**, at custom tag **position 4** in the project's tag list. Without it the plant can't be aimed at or harvested. The builder checks this against the game's own plants on every build.
 - **Root object** on layer 16, with a `SphereCollider` around the base of the plant.

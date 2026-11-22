@@ -9,7 +9,7 @@
 		Models come from Resources/BinaryNestFarming.unity3d, built by
 		unity/BinaryNestModAssets (BinaryNest > Build Farming Bundle).
 		  Carrot: custom models (CarrotSeedling, CarrotGrowth, CarrotHarvest)
-		  Wheat:  PLACEHOLDER vanilla hops models until the wheat models are made
+		  Wheat:  custom models (WheatSeedling, WheatGrowth, WheatHarvest)
 	-->
 	<append xpath="/blocks">
 
@@ -86,7 +86,7 @@
 			</property>
 			<property name="UnlockedBy" value="craftingSeeds" />
 			<property name="Shape" value="ModelEntity" />
-			<property name="Model" value="@:Entities/Plants/plantHopsSproutPrefab.prefab" />
+			<property name="Model" value="#@modfolder:Resources/BinaryNestFarming.unity3d?WheatSeedling" />
 			<property name="PlaceAsRandomRotation" value="true" />
 			<drop event="Destroy" name="plantedWheat1" count="1" />
 			<property name="SortOrder1" value="B960" />
@@ -94,9 +94,7 @@
 			<property name="Tags" value="seedSkill,seedMulti" />
 			<property name="SoundPickup" value="seeds_corn_grab" />
 			<property name="SoundPlace" value="seeds_corn_place" />
-			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/plantedWheat1.png exists. -->
-			<property name="CustomIcon" value="plantedCorn1" />
-			<property name="CustomIconTint" value="e6c35c" />
+			<!-- Icon: UIAtlases/ItemIconAtlas/plantedWheat1.png -->
 		</block>
 
 		<block name="plantedWheat2">
@@ -107,7 +105,7 @@
 			</property>
 			<property name="CustomIcon" value="plantedWheat1" />
 			<property name="Shape" value="ModelEntity" />
-			<property name="Model" value="@:Entities/Plants/plantHopsGrowthPrefab.prefab" />
+			<property name="Model" value="#@modfolder:Resources/BinaryNestFarming.unity3d?WheatGrowth" />
 			<drop event="Destroy" name="plantedWheat1" count="1" />
 			<property name="SortOrder1" value="B960" />
 			<property name="SortOrder2" value="0101" />
@@ -121,7 +119,7 @@
 			<property name="CustomIcon" value="plantedWheat1" />
 			<property name="DescriptionKey" value="plantedWheat3HarvestDesc" />
 			<property name="Shape" value="ModelEntity" />
-			<property name="Model" value="@:Entities/Plants/plantHopsHarvestPrefab.prefab" />
+			<property name="Model" value="#@modfolder:Resources/BinaryNestFarming.unity3d?WheatHarvest" />
 			<drop event="Harvest" name="resourceCropWheat" count="1" tag="wildCropsHarvest" />
 			<drop event="Harvest" name="resourceCropWheat" prob="0.5" count="1" tag="bonusCropHarvest" />
 			<drop event="Harvest" name="resourceCropWheat" count="1" tag="farmerBonusHarvest" />

@@ -10,12 +10,11 @@
 
 		<!-- Wheat: crafting resource only, not edible raw. Based on the vanilla cotton resource. -->
 		<item name="resourceCropWheat">
-			<property name="Extends" value="resourceCropCottonPlant"/>
+			<!-- param1 stops it inheriting cotton's CustomIcon, so our own icon is used. -->
+			<property name="Extends" value="resourceCropCottonPlant" param1="CustomIcon"/>
 			<property name="DescriptionKey" value="resourceCropWheatDesc"/>
 			<property name="Group" value="Resources,Food/Cooking"/>
-			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/resourceCropWheat.png exists. -->
-			<property name="CustomIcon" value="plantedHop3Harvest"/>
-			<property name="CustomIconTint" value="e6c35c"/>
+			<!-- Icon: UIAtlases/ItemIconAtlas/resourceCropWheat.png -->
 		</item>
 
 	</append>
