@@ -24,7 +24,9 @@ BinaryNest7DaysToDieMods/
 │   ├── guides/        # How-to guides (e.g. C# modding)
 │   ├── ideas/         # Design notes, one file per mod idea
 │   └── roadmap/       # Versioned specs: what goes in each release
-└── Mods/              # (planned) One folder per modlet
+├── Mods/              # One folder per modlet
+└── unity/
+    └── BinaryNestModAssets/  # Unity 2022.3.62f2 project for building asset bundles (models)
 ```
 
 Each modlet will follow the standard 7 Days to Die layout:
