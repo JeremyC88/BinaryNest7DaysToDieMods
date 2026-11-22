@@ -31,6 +31,8 @@ Every placeholder line in the XML is marked with a `PLACEHOLDER` comment.
 
 ## Rebuilding the art
 
+Icons and models follow the [art guide](../../docs/guides/art-guide.md).
+
 1. **Models, texture and icons:** `blender --background --factory-startup --python art/farming/carrot/build_carrot.py` (from the repo root). This writes the FBX models and leaf texture into the Unity project, the icons into `UIAtlases/ItemIconAtlas/`, and preview renders to `art/farming/carrot/previews/`.
 2. **Asset bundle:** run Unity 2022.3.62f2 on `unity/BinaryNestModAssets` with `-batchmode -quit -executeMethod BinaryNest.Editor.FarmingBundleBuilder.Build`, or use the **BinaryNest > Build Farming Bundle** menu in the editor. This writes `Resources/BinaryNestFarming.unity3d` into this mod and checks the prefabs' `T_Block` tag against the game's own plants.
 
