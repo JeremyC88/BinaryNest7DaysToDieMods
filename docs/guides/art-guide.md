@@ -80,7 +80,8 @@ Check new seed colours against vanilla and our existing seeds:
 ### Look
 
 - **Leaves are cut-out cards, like vanilla.** The vanilla potato and blueberry leaves are flat cards with a leaf texture whose transparent areas cut out the leaf's outline. That's what makes them look thin and detailed. Modelling every leaflet as solid geometry looked chunky and blocky next to them. The carrot uses one flat, slightly cupped card per frond with a feathery frond texture (`CarrotFrond.png`, RGBA). Mark the material as `cutout` in the builder's `MaterialDefs`. The shader then alpha-tests it and draws both sides, and the texture import keeps leaf coverage in distant mipmaps.
-- **Solid parts** (stalks, roots, grains) are normal geometry. Model any thin solid parts on both sides, because non-cut-out materials hide back faces.
+- **Wheat is cards throughout:** thin crossed cards for each stem (a real wheat stem is only ~3-4 mm across; solid tubes looked far too thick), crossed cards for each ear with the spikelets and bristles in the texture, and single cards for the leaves. Everything shares one RGBA atlas (`WheatPlant.png`) with green and gold versions. Draw ear details in metres so the card's aspect doesn't stretch them.
+- **Solid parts** (carrot stalks and roots) are normal geometry. Model any thin solid parts on both sides, because non-cut-out materials hide back faces.
 - **Muted colours:** the game's lighting makes the Unity Standard shader look brighter and more saturated than Blender. Choose darker, less saturated colours than looks right in Blender. Carrot leaf greens are around sRGB `(0.12–0.19, 0.26–0.32, 0.07–0.10)`.
 - **Variation:** generated textures with several colour variants (the carrot frond texture has two greens), picked per frond. Avoid one flat colour.
 - **Colours are sRGB values** (what Unity uses). In Blender, convert them to linear for the material (`srgb_to_linear`) so the previews match the game.
@@ -96,7 +97,7 @@ Budget for the grown stage's LOD0 against vanilla crops:
 | Potato (vanilla) | 396 (no LODs) |
 | Blueberry (vanilla) | 2,000 |
 | **Carrot (ours)** | **854** (LOD1 494, LOD2 246), leaf cards |
-| **Wheat (ours)** | **5,664** (LOD1 2,976, LOD2 576) |
+| **Wheat (ours)** | **1,056** (LOD1 704, LOD2 264), all cards |
 | Cotton (vanilla) | 5,602 |
 | Pumpkin (vanilla) | 12,538 |
 | Yucca / Hops (vanilla) | 14,090 / 15,188 |

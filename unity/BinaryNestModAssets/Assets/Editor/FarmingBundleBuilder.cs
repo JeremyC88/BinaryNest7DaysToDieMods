@@ -77,9 +77,8 @@ namespace BinaryNest.Editor
             },
             ["Wheat"] = new()
             {
-                ["WheatPlant"]      = (Color.white, 0.15f, "WheatPlant.png", false),
-                ["WheatGrainGreen"] = (new Color(0.45f, 0.53f, 0.23f), 0.25f, null, false),
-                ["WheatGrainGold"]  = (new Color(0.80f, 0.62f, 0.30f), 0.30f, null, false),
+                // Stems, ears and leaves are all cut-out cards on one texture atlas.
+                ["WheatPlant"] = (Color.white, 0.15f, "WheatPlant.png", true),
             },
         };
 

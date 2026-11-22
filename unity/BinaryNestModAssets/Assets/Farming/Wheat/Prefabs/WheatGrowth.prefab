@@ -53,8 +53,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.2678291
-  m_Center: {x: 0, y: -0.23217091, z: 0}
+  m_Radius: 0.28691262
+  m_Center: {x: 0, y: -0.21308738, z: 0}
 --- !u!205 &149546731588548366
 LODGroup:
   m_ObjectHideFlags: 0
@@ -63,8 +63,8 @@ LODGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 406652045532940962}
   serializedVersion: 2
-  m_LocalReferencePoint: {x: -0.00499849, y: -0.23246941, z: -0.04889512}
-  m_Size: 0.5356582
+  m_LocalReferencePoint: {x: 0.00028130412, y: -0.21325576, z: -0.021338314}
+  m_Size: 0.57382524
   m_FadeMode: 1
   m_AnimateCrossFading: 1
   m_LastLODIsBillboard: 0
@@ -144,7 +144,6 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 5b791ca4266994d4fb6b347e1ed9b163, type: 2}
-  - {fileID: 2100000, guid: b2283d4919635784ba87841e141ce927, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -228,7 +227,6 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 5b791ca4266994d4fb6b347e1ed9b163, type: 2}
-  - {fileID: 2100000, guid: b2283d4919635784ba87841e141ce927, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -312,7 +310,6 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 5b791ca4266994d4fb6b347e1ed9b163, type: 2}
-  - {fileID: 2100000, guid: b2283d4919635784ba87841e141ce927, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
