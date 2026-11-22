@@ -17,6 +17,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -144,7 +145,8 @@ namespace BinaryNest.Editor
                 {
                     var match = go.tag == vanillaTag;
                     ok &= match;
-                    Debug.Log($"[BinaryNest] Tag check: {go.name} = '{go.tag}', vanilla potato = '{vanillaTag}' -> {(match ? "match" : "MISMATCH")}");
+                    var lods = go.GetComponent<LODGroup>();
+                    Debug.Log($"[BinaryNest] Tag check: {go.name} = '{go.tag}', vanilla potato = '{vanillaTag}' -> {(match ? "match" : "MISMATCH")}; root LODGroup: {(lods ? lods.lodCount + " LODs" : "none")}");
                 }
                 if (ok) Debug.Log("[BinaryNest] Tag check passed.");
                 else Debug.LogError("[BinaryNest] Tag check FAILED: prefabs will not be targetable in game.");
@@ -292,15 +294,53 @@ namespace BinaryNest.Editor
             collider.radius = Mathf.Clamp(Mathf.Max(horizontal * 0.6f, bounds.extents.y), 0.15f, 0.4f);
             collider.center = new Vector3(0f, -0.5f + Mathf.Max(bounds.extents.y, 0.1f), 0f);
 
+            var lodSummary = SetUpLods(root, model);
+
             var dir = $"{FarmingRoot}/{crop}/Prefabs";
             Directory.CreateDirectory(dir);
             var path = $"{dir}/{prefabName}.prefab";
-            var summary = $"mesh size {bounds.size}, collider r={collider.radius:F2} centre={collider.center}";
+            var summary = $"mesh size {bounds.size}, collider r={collider.radius:F2} centre={collider.center}, {lodSummary}";
             PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
 
             Debug.Log($"[BinaryNest] Prefab {path}: {summary}");
             return path;
+        }
+
+        // Screen-height thresholds for switching away from each LOD (LOD0, LOD1, ...).
+        // The game recalculates the last one (when the plant is culled) from the
+        // plant's size, so only the earlier switches really come from here.
+        static readonly float[] LodTransitions = { 0.30f, 0.12f, 0.03f };
+
+        // The game reads the LODGroup from the prefab ROOT (BlockShapeModelEntity
+        // .PoolCreateCallBack), like the vanilla yucca and cotton prefabs. Unity
+        // auto-creates one on the imported model from the _LOD0/_LOD1/... mesh
+        // names, so move it to the root.
+        static string SetUpLods(GameObject root, GameObject model)
+        {
+            foreach (var g in model.GetComponentsInChildren<LODGroup>(true))
+                Object.DestroyImmediate(g);
+
+            var levels = new List<LOD>();
+            for (int i = 0; ; i++)
+            {
+                var renderers = model.GetComponentsInChildren<Renderer>(true)
+                    .Where(r => r.name.EndsWith($"_LOD{i}"))
+                    .ToArray();
+                if (renderers.Length == 0) break;
+                var height = i < LodTransitions.Length ? LodTransitions[i] : LodTransitions[^1] * 0.5f;
+                levels.Add(new LOD(height, renderers));
+            }
+
+            if (levels.Count == 0)
+                return "no LODs";
+
+            var group = root.AddComponent<LODGroup>();
+            group.fadeMode = LODFadeMode.CrossFade;
+            group.animateCrossFading = true;
+            group.SetLODs(levels.ToArray());
+            group.RecalculateBounds();
+            return $"{levels.Count} LODs";
         }
     }
 }

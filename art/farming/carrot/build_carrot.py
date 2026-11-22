@@ -153,7 +153,8 @@ def add_tube(bm, points, r0, r1, sides, mat):
             f.smooth = True
 
 
-# Lobed leaflet outline in local (x = width, y = length) space, 0..1 long.
+# Lobed leaflet outlines in local (x = width, y = length) space, 0..1 long,
+# one per level of detail.
 LEAFLET_OUTLINE = [
     (-0.30, 0.16), (-0.14, 0.24), (-0.44, 0.34), (-0.18, 0.44), (-0.38, 0.58),
     (-0.13, 0.64), (-0.24, 0.80), (-0.06, 0.82),
@@ -161,9 +162,24 @@ LEAFLET_OUTLINE = [
     (0.06, 0.82), (0.24, 0.80), (0.13, 0.64), (0.38, 0.58), (0.18, 0.44),
     (0.44, 0.34), (0.14, 0.24), (0.30, 0.16),
 ]
+LEAFLET_OUTLINE_MED = [
+    (-0.40, 0.30), (-0.16, 0.44), (-0.32, 0.64), (-0.08, 0.80),
+    (0.0, 1.0),
+    (0.08, 0.80), (0.32, 0.64), (0.16, 0.44), (0.40, 0.30),
+]
+LEAFLET_OUTLINE_LOW = [(-0.40, 0.40), (0.0, 1.0), (0.40, 0.40)]
+
+# Levels of detail. LOD0 is the full model; the game switches to the others
+# as the plant gets smaller on screen. All LODs use the same random seed, so
+# fronds sit in the same places.
+LODS = [
+    dict(outline=LEAFLET_OUTLINE,     stalk_sides=5, stalk_points=10, root_sides=12, root_rings=9, pair_drop=0, leaflet_scale=1.00),
+    dict(outline=LEAFLET_OUTLINE_MED, stalk_sides=4, stalk_points=6,  root_sides=8,  root_rings=6, pair_drop=0, leaflet_scale=1.05),
+    dict(outline=LEAFLET_OUTLINE_LOW, stalk_sides=3, stalk_points=4,  root_sides=6,  root_rings=4, pair_drop=2, leaflet_scale=1.35),
+]
 
 
-def add_leaflet(bm, uv_layer, base, direction, normal, size, variant):
+def add_leaflet(bm, uv_layer, base, direction, normal, size, variant, outline=LEAFLET_OUTLINE):
     """Lobed leaflet with a raised midrib, modelled on both sides, with UVs
     into the leaf texture tile for its colour variant."""
     direction = direction.normalized()
@@ -176,7 +192,7 @@ def add_leaflet(bm, uv_layer, base, direction, normal, size, variant):
 
     pts = [(0.0, 0.0, 0.0)]                              # base
     pts += [(0.0, 0.40, 0.07), (0.0, 0.72, 0.05)]        # raised midrib points
-    pts += [(x, y, -abs(x) * 0.30) for x, y in LEAFLET_OUTLINE]
+    pts += [(x, y, -abs(x) * 0.30) for x, y in outline]
 
     def world(x, y, lift):
         return base + side * x * size + direction * y * size + normal * lift * size
@@ -211,7 +227,7 @@ def add_leaflet(bm, uv_layer, base, direction, normal, size, variant):
                 loop[uv_layer].uv = uv(p[0], p[1])
 
 
-def add_frond(bm, uv_layer, rng, azimuth, length, pairs, base_offset=Vector()):
+def add_frond(bm, uv_layer, rng, azimuth, length, pairs, base_offset=Vector(), lod=LODS[0]):
     out = Vector((math.cos(azimuth), math.sin(azimuth), 0))
     elev = math.radians(rng.uniform(55, 75))
     droop = rng.uniform(0.15, 0.35)
@@ -220,10 +236,12 @@ def add_frond(bm, uv_layer, rng, azimuth, length, pairs, base_offset=Vector()):
     p1 = p0 + (out * math.cos(elev) + Vector((0, 0, math.sin(elev)))) * length * 0.6
     p2 = p0 + out * length * (0.55 + droop) + Vector((0, 0, length * (0.85 - droop)))
 
-    add_tube(bm, [bezier(p0, p1, p2, i / 9) for i in range(10)],
-             length * 0.022, length * 0.008, 5, MAT_INDEX["stalk"])
+    n = lod["stalk_points"]
+    add_tube(bm, [bezier(p0, p1, p2, i / (n - 1)) for i in range(n)],
+             length * 0.022, length * 0.008, lod["stalk_sides"], MAT_INDEX["stalk"])
 
-    leaflet_size = length * 0.30
+    pairs = max(1, pairs - lod["pair_drop"])
+    leaflet_size = length * 0.30 * lod["leaflet_scale"]
     for k in range(pairs):
         t = 0.35 + 0.55 * k / max(pairs, 1)
         base = bezier(p0, p1, p2, t)
@@ -233,10 +251,10 @@ def add_frond(bm, uv_layer, rng, azimuth, length, pairs, base_offset=Vector()):
         size = leaflet_size * (1.0 - 0.35 * k / max(pairs, 1))
         for sgn in (-1, 1):
             d = (tan * 0.55 + side * sgn).normalized()
-            add_leaflet(bm, uv_layer, base, d, normal, size, variant)
+            add_leaflet(bm, uv_layer, base, d, normal, size, variant, lod["outline"])
     tan = bezier_tangent(p0, p1, p2, 1.0)
     side = tan.cross(Vector((0, 0, 1))).normalized()
-    add_leaflet(bm, uv_layer, p2, tan, side.cross(tan), leaflet_size * 0.7, variant)
+    add_leaflet(bm, uv_layer, p2, tan, side.cross(tan), leaflet_size * 0.7, variant, lod["outline"])
 
 
 def add_root(bm, radius, length, above, sides=12, rings_n=9, rng=None):
@@ -279,50 +297,90 @@ def finish_object(bm, name):
     return obj
 
 
-def build_stage(cfg):
+def build_stage(cfg, lod_index=0):
+    lod = LODS[lod_index]
     rng = random.Random(cfg["seed"])
     bm = bmesh.new()
     uv_layer = bm.loops.layers.uv.new("UVMap")
     n = cfg["fronds"]
     for i in range(n):
         az = 2 * math.pi * i / n + rng.uniform(-0.25, 0.25)
-        add_frond(bm, uv_layer, rng, az, rng.uniform(*cfg["length"]), cfg["pairs"])
+        add_frond(bm, uv_layer, rng, az, rng.uniform(*cfg["length"]), cfg["pairs"], lod=lod)
     if cfg["shoulder"] > 0:
-        add_root(bm, cfg["shoulder"], 0.13, cfg["shoulder"] * 1.4, rng=rng)
-    return finish_object(bm, cfg["name"])
+        add_root(bm, cfg["shoulder"], 0.13, cfg["shoulder"] * 1.4,
+                 sides=lod["root_sides"], rings_n=lod["root_rings"], rng=rng)
+    return finish_object(bm, f"{cfg['name']}_LOD{lod_index}")
 
 
-def build_whole_carrot(name, seed, length=0.20, radius=0.028):
-    """A pulled carrot (root + leafy top) for the item icon, lying along +Z."""
+def build_whole_carrot(name, seed, length=0.20, radius=0.028, fronds=5, frond_length=(0.10, 0.14)):
+    """A pulled carrot (root + leafy top). Leaves point up +Z, tip down -Z."""
     rng = random.Random(seed)
     bm = bmesh.new()
     uv_layer = bm.loops.layers.uv.new("UVMap")
-    add_root(bm, radius, length, 0.0, rng=rng)
-    for i in range(5):
-        az = 2 * math.pi * i / 5 + rng.uniform(-0.3, 0.3)
-        add_frond(bm, uv_layer, rng, az, rng.uniform(0.10, 0.14), 2)
+    add_root(bm, radius, length, 0.0, sides=16, rings_n=12, rng=rng)
+    for i in range(fronds):
+        az = 2 * math.pi * i / fronds + rng.uniform(-0.3, 0.3)
+        add_frond(bm, uv_layer, rng, az, rng.uniform(*frond_length), 2)
     return finish_object(bm, name)
+
+
+MAT_SEEDS = [make_material(f"CarrotSeed{i}", rgb, 0.7) for i, rgb in enumerate(
+    [(0.62, 0.48, 0.30), (0.55, 0.41, 0.25), (0.70, 0.56, 0.36)])]
+
+
+def build_seed_pile(name, seed, count=110, pile_radius=0.05, seed_radius=0.0065):
+    """A heap of small round, pale tan seeds (carrot seeds) for the seed icon."""
+    rng = random.Random(seed)
+    bm = bmesh.new()
+    for _ in range(count):
+        r = pile_radius * math.sqrt(rng.random())
+        a = rng.uniform(0, 2 * math.pi)
+        height = (1.0 - r / pile_radius) ** 1.1 * pile_radius * 0.8
+        z = rng.uniform(0.3, 1.0) * height + seed_radius * 0.5
+        geom = bmesh.ops.create_icosphere(bm, subdivisions=2, radius=seed_radius)
+        verts = geom["verts"]
+        rot = (Matrix.Rotation(rng.uniform(0, math.pi), 4, "Z") @
+               Matrix.Rotation(rng.uniform(-0.6, 0.6), 4, "X"))
+        scale = Matrix.Diagonal((1.0, rng.uniform(0.8, 0.95), rng.uniform(0.55, 0.7), 1.0))
+        bmesh.ops.transform(bm, matrix=Matrix.Translation((math.cos(a) * r, math.sin(a) * r, z)) @ rot @ scale, verts=verts)
+        mat_index = rng.randrange(len(MAT_SEEDS))
+        for f in {f for v in verts for f in v.link_faces}:
+            f.material_index = mat_index
+            f.smooth = True
+    mesh = bpy.data.meshes.new(name)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new(name, mesh)
+    for m in MAT_SEEDS:
+        obj.data.materials.append(m)
+    scene.collection.objects.link(obj)
+    return obj
 
 
 # --------------------------------------------------------------------------
 # Build and export the growth stages
 # --------------------------------------------------------------------------
-models = [build_stage(cfg) for cfg in STAGES]
+stage_lods = {cfg["name"]: [build_stage(cfg, i) for i in range(len(LODS))] for cfg in STAGES}
+models = [lods[0] for lods in stage_lods.values()]   # LOD0s, used for previews and icons
+all_lod_objects = [o for lods in stage_lods.values() for o in lods]
 
-for obj in models:
+# One FBX per stage holding <Stage>_LOD0.._LOD2. Unity groups them by suffix.
+for name, lods in stage_lods.items():
     bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    for o in lods:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = lods[0]
     bpy.ops.export_scene.fbx(
-        filepath=os.path.join(EXPORT_DIR, obj.name + ".fbx"),
+        filepath=os.path.join(EXPORT_DIR, name + ".fbx"),
         use_selection=True, apply_unit_scale=True, apply_scale_options="FBX_SCALE_ALL",
         axis_forward="-Z", axis_up="Y", bake_space_transform=True,
         use_mesh_modifiers=True, mesh_smooth_type="FACE", add_leaf_bones=False,
         path_mode="STRIP",
     )
-    tris = sum(len(p.vertices) - 2 for p in obj.data.polygons)
-    d = obj.dimensions
-    print(f"[carrot] {obj.name}: {tris} tris, size {d.x:.2f} x {d.y:.2f} x {d.z:.2f} m")
+    counts = [sum(len(p.vertices) - 2 for p in o.data.polygons) for o in lods]
+    d = lods[0].dimensions
+    print(f"[carrot] {name}: tris " + " / ".join(f"LOD{i} {c}" for i, c in enumerate(counts))
+          + f", size {d.x:.2f} x {d.y:.2f} x {d.z:.2f} m")
 
 # --------------------------------------------------------------------------
 # Rendering setup
@@ -367,8 +425,11 @@ def render(path, res_x, res_y):
     print(f"[carrot] rendered {path}")
 
 
+icon_lights = []
+
+
 def show_only(objs):
-    keep = set(objs) | {cam, sun}
+    keep = set(objs) | {cam, sun} | set(icon_lights)
     for o in scene.objects:
         o.hide_render = o not in keep
 
@@ -394,28 +455,53 @@ for obj in models:
     cam_data.lens = 60
     dist = 0.55 + h * 2.4
     aim((obj.location.x + dist * 0.6, -dist * 0.8, h * 0.45 + dist * 0.45), (obj.location.x, 0, h * 0.45))
-    render(os.path.join(PREVIEW_DIR, f"{obj.name}.png"), 900, 900)
+    render(os.path.join(PREVIEW_DIR, f"{obj.name.rsplit('_LOD', 1)[0]}.png"), 900, 900)
+
+# --- LOD comparison for the grown carrot ------------------------------------
+lod_objs = stage_lods["CarrotHarvest"]
+for i, o in enumerate(lod_objs):
+    o.location = ((i - 1) * 1.05, 30.0, 0.0)
+show_only(lod_objs)
+cam_data.type = "PERSP"
+cam_data.lens = 50
+aim((0.0, 30.0 - 4.2, 1.5), (0.0, 30.0, 0.12))
+render(os.path.join(PREVIEW_DIR, "carrot_harvest_lods.png"), 1500, 600)
 
 # --- Icons: transparent background, orthographic, fitted -----------------
-icon_objs = []
+# Icons are shown small in the game, so: one clear subject, filling the square,
+# brightly lit, with the crop's colour easy to spot.
 
-# foodCropCarrot: two pulled carrots crossed
-c1 = build_whole_carrot("IconCarrotA", 101)
-c2 = build_whole_carrot("IconCarrotB", 202, length=0.18, radius=0.025)
-c1.matrix_world = Matrix.Translation((10.0, 0.0, 0.0)) @ Matrix.Rotation(math.radians(-50), 4, "Y")
-c2.matrix_world = Matrix.Translation((10.05, 0.04, -0.03)) @ Matrix.Rotation(math.radians(-30), 4, "Y") @ Matrix.Rotation(math.radians(25), 4, "Z")
+# foodCropCarrot: one big carrot on a diagonal (leaves top right, tip bottom
+# left), like the vanilla corn icon. Short leafy top so the orange root leads.
+icon_carrot = build_whole_carrot("IconCarrot", 101, length=0.24, radius=0.042,
+                                 fronds=6, frond_length=(0.08, 0.10))
+icon_carrot.matrix_world = (Matrix.Translation((10.0, 0.0, 0.0)) @
+                            Matrix.Rotation(math.radians(-12), 4, "X") @
+                            Matrix.Rotation(math.radians(45), 4, "Y"))
 
-# plantedCarrot1 (Carrot Seeds): a young carrot plant in a small mound of soil
-seed_plant = models[1].copy()
-seed_plant.data = models[1].data.copy()
-seed_plant.name = "IconSeedPlant"
-scene.collection.objects.link(seed_plant)
-seed_plant.location = (20.0, 0.0, 0.0)
-bpy.ops.mesh.primitive_uv_sphere_add(radius=0.13, location=(20.0, 0.0, -0.05), segments=24, ring_count=12)
-mound = bpy.context.active_object
-mound.scale = (1.0, 1.0, 0.38)
-mound.data.materials.append(MAT_SOIL)
-bpy.ops.object.shade_smooth()
+# plantedCarrot1 (Carrot Seeds): a heap of small round pale seeds with one small
+# carrot in front, like the vanilla blueberry seeds (seed heap + berries).
+seed_pile = build_seed_pile("IconSeedPile", 303, count=140)
+seed_pile.location = (20.0, 0.0, 0.0)
+seed_carrot = build_whole_carrot("IconSeedCarrot", 404, length=0.09, radius=0.016,
+                                 fronds=4, frond_length=(0.018, 0.024))
+# Lying side-on in front of the heap: green top to the left, tip to the right.
+seed_carrot.matrix_world = (Matrix.Translation((20.0, -0.055, 0.014)) @
+                            Matrix.Rotation(math.radians(-12), 4, "Z") @
+                            Matrix.Rotation(math.radians(-95), 4, "Y"))
+
+# Brighter, softer light for icons: key from top left, fill from the right.
+for name, energy, rot in (("IconKey", 4.5, (40, 0, -40)), ("IconFill", 1.8, (60, 0, 120))):
+    light = bpy.data.objects.new(name, bpy.data.lights.new(name, "SUN"))
+    light.data.energy = energy
+    light.data.angle = math.radians(10)
+    light.rotation_euler = tuple(math.radians(a) for a in rot)
+    scene.collection.objects.link(light)
+    icon_lights.append(light)
+sun.hide_render = True
+keep_sun = sun
+sun = icon_lights[0]  # show_only keeps 'sun'; point it at the key light for icons
+bg.inputs["Strength"].default_value = 1.2
 
 scene.render.film_transparent = True
 scene.render.image_settings.color_mode = "RGBA"
@@ -423,24 +509,34 @@ scene.view_settings.view_transform = "Standard"
 cam_data.type = "ORTHO"
 
 ICONS = [
-    ("foodCropCarrot", [c1, c2], (0.35, -1.0, 0.55)),
-    ("plantedCarrot1", [seed_plant, mound], (0.45, -1.0, 0.75)),
+    ("foodCropCarrot", [icon_carrot], (0.0, -1.0, 0.18)),
+    ("plantedCarrot1", [seed_pile, seed_carrot], (0.15, -1.0, 0.65)),
 ]
 depsgraph = bpy.context.evaluated_depsgraph_get()
 for icon_name, objs, view_dir in ICONS:
     show_only(objs)
     coords = []
     for o in objs:
-        coords += [o.matrix_world @ Vector(c) for c in o.bound_box]
-    centre = sum(coords, Vector()) / len(coords)
-    aim(centre + Vector(view_dir).normalized() * 5.0, centre)
-    bpy.context.view_layer.update()
-    flat = [c for v in coords for c in v]
-    loc, scale = cam.camera_fit_coords(bpy.context.evaluated_depsgraph_get(), flat)
-    cam.location = loc
-    cam_data.ortho_scale = scale * 0.92
+        # Fit to the real vertices: a rotated bounding box is far bigger than the object.
+        coords += [o.matrix_world @ v.co for v in o.data.vertices]
+    # Frame by projecting the vertices onto the camera's right/up axes.
+    forward = -Vector(view_dir).normalized()
+    rot = forward.to_track_quat("-Z", "Y")
+    right = rot @ Vector((1, 0, 0))
+    up = rot @ Vector((0, 1, 0))
+    xs = [c.dot(right) for c in coords]
+    ys = [c.dot(up) for c in coords]
+    mid = right * (min(xs) + max(xs)) / 2 + up * (min(ys) + max(ys)) / 2
+    depth = sum((c.dot(forward) for c in coords)) / len(coords)
+    cam.location = mid + forward * depth - forward * 5.0
+    cam.rotation_euler = rot.to_euler()
+    cam_data.ortho_scale = max(max(xs) - min(xs), max(ys) - min(ys)) * 1.06
     render(os.path.join(ICON_DIR, f"{icon_name}.png"), 160, 160)
     render(os.path.join(PREVIEW_DIR, f"icon_{icon_name}.png"), 160, 160)
+    # Also check how it reads at inventory-slot size.
+    render(os.path.join(PREVIEW_DIR, f"icon_{icon_name}_small.png"), 56, 56)
+
+sun = keep_sun
 
 # Leave the file in an editable state
 scene.render.film_transparent = False

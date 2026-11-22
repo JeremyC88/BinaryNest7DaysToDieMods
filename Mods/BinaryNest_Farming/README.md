@@ -22,7 +22,7 @@ Display names come from `Config/Localization.csv`. The game only loads a mod's l
 
 | What | Status |
 | --- | --- |
-| Carrot models (3 stages) | ✅ Custom models in `Resources/BinaryNestFarming.unity3d` |
+| Carrot models (3 stages) | ✅ Custom models in `Resources/BinaryNestFarming.unity3d`, each with 3 LODs (grown carrot: 4,714 / 2,654 / 826 triangles) |
 | Carrot and Carrot Seeds icons | ✅ `UIAtlases/ItemIconAtlas/foodCropCarrot.png`, `plantedCarrot1.png` |
 | Wheat models (3 stages) | ⏳ PLACEHOLDER: vanilla hops models |
 | Wheat and Wheat Seeds icons | ⏳ PLACEHOLDER: tinted vanilla icons (`CustomIcon` / `CustomIconTint`) |
