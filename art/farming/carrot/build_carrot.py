@@ -10,7 +10,8 @@ Outputs:
     art/farming/carrot/previews/*.png          preview renders
     unity/BinaryNestModAssets/Assets/Farming/Carrot/
         Models/Carrot<Stage>.fbx               one model per growth stage
-        Textures/CarrotFrond.png               frond texture with alpha (2 green variants)
+        Textures/CarrotFrond.png               frond texture with alpha (2 greens + wild flower head)
+        Textures/CarrotRoot.png                carrot skin texture
 
 Scale: 1 Blender unit = 1 metre = 1 game block. Each model's origin is where
 the plant meets the soil.
@@ -41,6 +42,11 @@ STAGES = [
     dict(name="CarrotSeedling", fronds=3,  length=(0.09, 0.13), shoulder=0.0,   seed=11),
     dict(name="CarrotGrowth",   fronds=5,  length=(0.20, 0.28), shoulder=0.016, seed=22),
     dict(name="CarrotHarvest",  fronds=7, length=(0.34, 0.46), shoulder=0.032, seed=33),
+    # Wild carrot (Queen Anne's lace): bigger, leafier, with white flower heads
+    # on tall stalks so it's easy to spot in the landscape. Used by the wild
+    # block plantedCarrot3Harvest; farmed carrots keep CarrotHarvest.
+    dict(name="CarrotWild",     fronds=9, length=(0.42, 0.58), shoulder=0.026, seed=44,
+         umbels=3, umbel_height=(0.58, 0.80), umbel_radius=0.085),
 ]
 
 # Two muted greens, one per texture tile; each frond picks one (sRGB).
@@ -50,6 +56,8 @@ FROND_VARIANTS = [
 ]
 STALK_RGB = (0.17, 0.29, 0.10)
 ROOT_RGB = (0.80, 0.32, 0.05)
+UMBEL_TILE = len(FROND_VARIANTS)   # texture tile after the frond tiles: white flower head
+TILES = len(FROND_VARIANTS) + 1
 FROND_TILE = (256, 512)    # one frond per tile: u across the frond, v from base to tip
 FROND_WIDTH = 0.42         # card width as a fraction of the frond's length
 CARD_START = 0.22          # the leafy card starts this far along the stalk
@@ -66,7 +74,7 @@ scene.unit_settings.system = "METRIC"
 def make_frond_texture():
     tw, th = FROND_TILE
     ss = 2
-    W, H = tw * ss * len(FROND_VARIANTS), th * ss
+    W, H = tw * ss * TILES, th * ss
     rgba = [None] * (W * H)
 
     def put(x, y, col):
@@ -143,6 +151,28 @@ def make_frond_texture():
                 line(x0, y0, x1, y1, 1.4, stem)
         line(px_u(0.5), px_v(0.0), px_u(0.5), px_v(0.97), 2.4, stem)   # main stem
 
+    # Umbel (wild carrot flower head), drawn in the bottom square of its tile:
+    # many small white umbellets on fine green rays, one dark centre floret.
+    rng = random.Random(300)
+    ox = UMBEL_TILE * tw * ss
+    cx, cy, R = ox + tw * ss * 0.5, tw * ss * 0.5, tw * ss * 0.46
+    ray = shade(STALK_RGB, 1.6)
+    centres = []
+    for ring_i, (rr, count) in enumerate(((0.0, 1), (0.32, 7), (0.62, 13), (0.88, 19))):
+        for k in range(count):
+            a = 2 * math.pi * k / count + rng.uniform(-0.12, 0.12) + ring_i * 0.4
+            centres.append((cx + math.cos(a) * rr * R, cy + math.sin(a) * rr * R))
+    for (ux, uy) in centres:
+        line(cx, cy, ux, uy, 1.2, ray)
+    for (ux, uy) in centres:
+        for f in range(rng.randint(22, 30)):
+            a = rng.uniform(0, 2 * math.pi)
+            r = R * 0.135 * math.sqrt(rng.random())
+            k = rng.uniform(0.88, 1.0)
+            ellipse(ux + math.cos(a) * r, uy + math.sin(a) * r, 5.2, 5.2, 0.0,
+                    (0.93 * k, 0.92 * k, 0.86 * k, 1.0))
+    ellipse(cx, cy, 5.0, 5.0, 0.0, (0.28, 0.10, 0.16, 1.0))   # dark centre floret
+
     # Average 2x2 down. Transparent pixels keep the leaf colour so filtered
     # edges don't get dark fringes.
     fill = (*FROND_VARIANTS[0], 0.0)
@@ -177,6 +207,49 @@ def make_frond_texture():
 FROND_IMAGE = make_frond_texture()
 
 
+def make_root_texture():
+    """Carrot skin: u around the root, v from the crown (0) to the tip (1).
+    Fine horizontal ring lines, short darker marks, faint lengthwise streaks,
+    a greenish-brown crown and a darker tip."""
+    w, h = 128, 256
+    rng = random.Random(55)
+    lines = [rng.uniform(0.04, 1.0) for _ in range(46)]
+    marks = [(rng.uniform(0, 1), rng.uniform(0.05, 0.98), rng.uniform(0.04, 0.16)) for _ in range(70)]
+    streak = [rng.uniform(0.96, 1.04) for _ in range(w)]
+    px = [0.0] * (w * h * 4)
+    r0, g0, b0 = ROOT_RGB
+    for y in range(h):
+        v = (y + 0.5) / h
+        crown = max(0.0, 1.0 - v / 0.07)              # greenish-brown where the leaves sprout
+        tipk = 1.0 - 0.22 * max(0.0, (v - 0.6) / 0.4)  # darker towards the tip
+        for x in range(w):
+            u = (x + 0.5) / w
+            k = tipk * streak[x] * (1.0 + rng.uniform(-0.025, 0.025))
+            for lv in lines:                           # fine ring lines
+                if abs(v - lv) < 0.0045:
+                    k *= 0.82
+                    break
+            for mu, mv, mlen in marks:                 # short darker marks (lenticels)
+                du = min(abs(u - mu), 1.0 - abs(u - mu))
+                if abs(v - mv) < 0.006 and du < mlen * 0.5:
+                    k *= 0.72
+                    break
+            r = (r0 * (1 - crown) + 0.42 * crown) * k
+            g = (g0 * (1 - crown) + 0.34 * crown) * k
+            b = (b0 * (1 - crown) + 0.10 * crown) * k
+            i = (y * w + x) * 4
+            px[i:i + 4] = (min(r, 1), min(g, 1), min(b, 1), 1.0)
+    img = bpy.data.images.new("CarrotRoot", w, h, alpha=False)
+    img.pixels = px
+    img.filepath_raw = os.path.join(TEXTURE_DIR, "CarrotRoot.png")
+    img.file_format = "PNG"
+    img.save()
+    return img
+
+
+ROOT_IMAGE = make_root_texture()
+
+
 def srgb_to_linear(c):
     return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 
@@ -203,7 +276,7 @@ def make_material(name, rgb, roughness=0.6, image=None, cutout=False):
 
 MAT_STALK = make_material("CarrotStalk", STALK_RGB, 0.8)
 MAT_LEAF = make_material("CarrotLeaf", (1, 1, 1), 0.55, FROND_IMAGE, cutout=True)
-MAT_ROOT = make_material("CarrotRoot", ROOT_RGB, 0.45)
+MAT_ROOT = make_material("CarrotRoot", (1, 1, 1), 0.45, ROOT_IMAGE)
 MAT_SOIL = make_material("PreviewSoil", (0.16, 0.10, 0.06), 0.95)
 MAT_INDEX = {"stalk": 0, "leaf": 1, "root": 2}
 
@@ -244,9 +317,9 @@ def add_tube(bm, points, r0, r1, sides, mat):
 # as the plant gets smaller on screen. All LODs use the same random seed, so
 # fronds sit in the same places.
 LODS = [
-    dict(card_segs=6, stalk_sides=5, stalk_points=5, root_sides=12, root_rings=9),
-    dict(card_segs=4, stalk_sides=4, stalk_points=4, root_sides=8,  root_rings=6),
-    dict(card_segs=2, stalk_sides=3, stalk_points=3, root_sides=6,  root_rings=4),
+    dict(card_segs=6, stalk_sides=5, stalk_points=5, root_sides=12, root_rings=11, umbel_ring=10),
+    dict(card_segs=4, stalk_sides=4, stalk_points=4, root_sides=8,  root_rings=6,  umbel_ring=7),
+    dict(card_segs=2, stalk_sides=3, stalk_points=3, root_sides=6,  root_rings=4,  umbel_ring=5),
 ]
 
 
@@ -268,7 +341,7 @@ def add_frond_card(bm, uv_layer, p0, p1, p2, width, segs, variant, roll=0.0, mir
         left.append(bm.verts.new(c - side * width * 0.5 - cup))
         mid.append(bm.verts.new(c))
         right.append(bm.verts.new(c + side * width * 0.5 - cup))
-    tiles = len(FROND_VARIANTS)
+    tiles = TILES
     for i in range(segs):
         for quad, us in (((left[i], mid[i], mid[i + 1], left[i + 1]), (0.0, 0.5, 0.5, 0.0)),
                          ((mid[i], right[i], right[i + 1], mid[i + 1]), (0.5, 1.0, 1.0, 0.5))):
@@ -299,32 +372,80 @@ def add_frond(bm, uv_layer, rng, azimuth, length, lod):
     add_frond_card(bm, uv_layer, p0, p1, p2, width, lod["card_segs"], variant, roll, mirror)
 
 
-def add_root(bm, radius, length, above, sides=12, rings_n=9, rng=None):
+def add_umbel(bm, uv_layer, rng, height, radius, lod):
+    """Wild carrot flower: a thin stalk rising from the plant with a flat,
+    slightly domed white flower head on top (cut-out card, both sides)."""
+    az = rng.uniform(0, 2 * math.pi)
+    out = Vector((math.cos(az), math.sin(az), 0))
+    p0 = out * 0.01
+    p2 = out * height * rng.uniform(0.12, 0.25) + Vector((0, 0, height))
+    p1 = p0 * 0.5 + Vector((0, 0, height * 0.55))
+    n = lod["stalk_points"] + 1
+    add_tube(bm, [bezier(p0, p1, p2, i / (n - 1)) for i in range(n)],
+             0.0032, 0.0022, lod["stalk_sides"], MAT_INDEX["stalk"])
+    tilt = (bezier_tangent(p0, p1, p2, 1.0) * 0.35 + Vector((0, 0, 1))).normalized()
+    a = tilt.cross(Vector((1, 0, 0)))
+    a = a.normalized() if a.length > 1e-6 else Vector((0, 1, 0))
+    b = tilt.cross(a).normalized()
+    ring_n = lod["umbel_ring"]
+    centre = bm.verts.new(p2 + tilt * radius * 0.38)          # domed centre
+    ring = [bm.verts.new(p2 + (a * math.cos(2 * math.pi * k / ring_n) +
+                               b * math.sin(2 * math.pi * k / ring_n)) * radius)
+            for k in range(ring_n)]
+    # UVs: the umbel is drawn in the bottom square of its tile.
+    uc, vc = (UMBEL_TILE + 0.5) / TILES, 0.25
+    ur, vr = 0.5 / TILES, 0.25
+    for k in range(ring_n):
+        k2 = (k + 1) % ring_n
+        f = bm.faces.new((centre, ring[k], ring[k2]))
+        f.material_index = MAT_INDEX["leaf"]
+        f.smooth = True
+        for loop, ang in zip(f.loops, (None, k, k2)):
+            if ang is None:
+                loop[uv_layer].uv = Vector((uc, vc))
+            else:
+                th = 2 * math.pi * ang / ring_n
+                loop[uv_layer].uv = Vector((uc + math.cos(th) * ur * 0.98, vc + math.sin(th) * vr * 0.98))
+
+
+def add_root(bm, radius, length, above, sides=12, rings_n=9, rng=None, uv_layer=None):
     """Carrot root: rounded shoulder 'above' metres over the soil, tapering to
-    a point 'length' below the top. Slight ring wobble for definition."""
+    a point 'length' below the top. Alternating ring sizes give subtle ridges;
+    UVs map the skin texture (u around, v from crown to tip)."""
     rings = []
     top = above
     for i in range(rings_n):
         t = i / (rings_n - 1)                    # 0 = top, 1 = tip
         z = top - t * length
         rf = (1.0 - t) ** 0.85 if t > 0.08 else 0.82 + t * 2.2
-        wobble = 1.0 + (rng.uniform(-0.04, 0.04) if rng else 0.0)
+        ridge = 1.0 + (0.035 if i % 2 else -0.02) * (1.0 if 0 < i < rings_n - 1 else 0.0)
+        wobble = ridge * (1.0 + (rng.uniform(-0.04, 0.04) if rng else 0.0))
         rings.append([bm.verts.new((math.cos(2 * math.pi * s / sides) * radius * rf * wobble,
                                     math.sin(2 * math.pi * s / sides) * radius * rf * wobble, z))
                       for s in range(sides)])
+    def set_uv(face, uvs):
+        if uv_layer is not None:
+            for loop, uv in zip(face.loops, uvs):
+                loop[uv_layer].uv = Vector(uv)
+
     for i in range(rings_n - 1):
+        v0, v1 = i / (rings_n - 1), (i + 1) / (rings_n - 1)
         for s in range(sides):
             f = bm.faces.new((rings[i][s], rings[i][(s + 1) % sides],
                               rings[i + 1][(s + 1) % sides], rings[i + 1][s]))
             f.material_index = MAT_INDEX["root"]
             f.smooth = True
+            u0, u1 = s / sides, (s + 1) / sides
+            set_uv(f, ((u0, v0), (u1, v0), (u1, v1), (u0, v1)))
     cap = bm.faces.new(rings[0])
     cap.material_index = MAT_INDEX["root"]
+    set_uv(cap, [(0.5, 0.01)] * sides)
     tip = bm.verts.new((0, 0, top - length * 1.02))
     for s in range(sides):
         f = bm.faces.new((rings[-1][(s + 1) % sides], rings[-1][s], tip))
         f.material_index = MAT_INDEX["root"]
         f.smooth = True
+        set_uv(f, (((s + 1) / sides, 1.0), (s / sides, 1.0), ((s + 0.5) / sides, 1.0)))
 
 
 def finish_object(bm, name):
@@ -348,9 +469,11 @@ def build_stage(cfg, lod_index=0):
     for i in range(n):
         az = 2 * math.pi * i / n + rng.uniform(-0.55, 0.55)   # irregular spacing
         add_frond(bm, uv_layer, rng, az, rng.uniform(*cfg["length"]), lod)
+    for _ in range(cfg.get("umbels", 0)):
+        add_umbel(bm, uv_layer, rng, rng.uniform(*cfg["umbel_height"]), cfg["umbel_radius"], lod)
     if cfg["shoulder"] > 0:
         add_root(bm, cfg["shoulder"], 0.13, cfg["shoulder"] * 1.4,
-                 sides=lod["root_sides"], rings_n=lod["root_rings"], rng=rng)
+                 sides=lod["root_sides"], rings_n=lod["root_rings"], rng=rng, uv_layer=uv_layer)
     return finish_object(bm, f"{cfg['name']}_LOD{lod_index}")
 
 
@@ -431,7 +554,7 @@ def show_only(objs):
 soils = []
 spacing = 1.1
 for i, obj in enumerate(models):
-    obj.location.x = (i - 1) * spacing
+    obj.location.x = (i - (len(models) - 1) / 2) * spacing
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=(obj.location.x, 0, -0.5))
     soil = bpy.context.active_object
     soil.name = f"PreviewSoil_{obj.name}"
@@ -441,7 +564,7 @@ for i, obj in enumerate(models):
 show_only(models + soils)
 cam_data.type = "PERSP"
 cam_data.lens = 50
-aim((0.0, -3.6, 1.35), (0, 0, 0.18))
+aim((0.0, -4.6, 1.7), (0, 0, 0.22))
 render(os.path.join(PREVIEW_DIR, "carrot_stages_lineup.png"), 1600, 700)
 for obj in models:
     h = max(obj.dimensions.z, 0.12)

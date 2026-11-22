@@ -56,6 +56,7 @@ namespace BinaryNest.Editor
             ("Carrot", "CarrotSeedling", "CarrotSeedling"),
             ("Carrot", "CarrotGrowth",   "CarrotGrowth"),
             ("Carrot", "CarrotHarvest",  "CarrotHarvest"),
+            ("Carrot", "CarrotWild",     "CarrotWild"),      // wild block: bigger, with flower heads
             ("Wheat",  "WheatSeedling",  "WheatSeedling"),
             ("Wheat",  "WheatGrowth",    "WheatGrowth"),
             ("Wheat",  "WheatHarvest",   "WheatHarvest"),
@@ -73,7 +74,7 @@ namespace BinaryNest.Editor
             {
                 ["CarrotLeaf"]  = (Color.white, 0.15f, "CarrotFrond.png", true),
                 ["CarrotStalk"] = (new Color(0.17f, 0.29f, 0.10f), 0.10f, null, false),
-                ["CarrotRoot"]  = (new Color(0.80f, 0.32f, 0.05f), 0.30f, null, false),
+                ["CarrotRoot"]  = (Color.white, 0.30f, "CarrotRoot.png", false),
             },
             ["Wheat"] = new()
             {
@@ -176,8 +177,15 @@ namespace BinaryNest.Editor
                         .SelectMany(r => r.sharedMaterials)
                         .Where(m => m != null && m.shader != null)
                         .Select(m => $"{m.shader.name}{(m.shader.isSupported ? "" : " (NOT SUPPORTED)")}")
-                        .Distinct();
+                        .Distinct()
+                        .ToList();
                     Debug.Log($"[BinaryNest] Shader check: {go.name} uses {string.Join(", ", shaders)}");
+                    if (shaders.Count != 1 || shaders[0] != CropShader)
+                    {
+                        // Any other shader means a material wasn't linked (no wind, wrong look).
+                        Debug.LogError($"[BinaryNest] Shader check FAILED: {go.name} must use only {CropShader}.");
+                        ok = false;
+                    }
                     var lods = go.GetComponent<LODGroup>();
                     Debug.Log($"[BinaryNest] Tag check: {go.name} = '{go.tag}', vanilla potato = '{vanillaTag}' -> {(match ? "match" : "MISMATCH")}; root LODGroup: {(lods ? lods.lodCount + " LODs" : "none")}");
                 }
@@ -238,6 +246,15 @@ namespace BinaryNest.Editor
 
         static void ConfigureImporter(string fbxPath, string crop)
         {
+            // Create every material (and reimport its texture) FIRST. Reimporting
+            // a texture refreshes the asset database, which throws away any
+            // unsaved changes on a model importer we were already editing; doing
+            // it mid-way once left a new model with only its last material linked.
+            var materials = new Dictionary<string, Material>();
+            foreach (var (name, def) in MaterialDefs[crop])
+                materials[name] = GetOrCreateMaterial(crop, name, def.color, def.smoothness, def.texture, def.cutout);
+            AssetDatabase.SaveAssets();
+
             var importer = (ModelImporter)AssetImporter.GetAtPath(fbxPath);
             importer.globalScale = 1f;
             importer.useFileScale = true;
@@ -251,11 +268,8 @@ namespace BinaryNest.Editor
             importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
             importer.materialLocation = ModelImporterMaterialLocation.InPrefab;
 
-            foreach (var (name, def) in MaterialDefs[crop])
-            {
-                var mat = GetOrCreateMaterial(crop, name, def.color, def.smoothness, def.texture, def.cutout);
+            foreach (var (name, mat) in materials)
                 importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), name), mat);
-            }
             importer.SaveAndReimport();
         }
 

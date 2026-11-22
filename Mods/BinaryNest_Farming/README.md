@@ -22,7 +22,7 @@ Display names come from `Config/Localization.csv`. The game only loads a mod's l
 
 | What | Status |
 | --- | --- |
-| Carrot models (3 stages) | ✅ Custom models in `Resources/BinaryNestFarming.unity3d`, with cut-out leaf cards and 3 LODs each (grown carrot: 662 / 374 / 186 triangles) |
+| Carrot models (3 stages) | ✅ Custom models in `Resources/BinaryNestFarming.unity3d`, with cut-out leaf cards and 3 LODs each (grown carrot: 710 / 374 / 186 triangles). Wild carrots use a bigger `CarrotWild` model with white flower heads so they're easy to spot |
 | Carrot and Carrot Seeds icons | ✅ `UIAtlases/ItemIconAtlas/foodCropCarrot.png`, `plantedCarrot1.png` (made with ChatGPT) |
 | Wheat models (3 stages) | ✅ Custom models in the same bundle, built from cut-out cards with 3 LODs each (grown wheat: 1,056 / 704 / 264 triangles) |
 | Wheat and Wheat Seeds icons | ✅ `resourceCropWheat.png`, `plantedWheat1.png` (made with ChatGPT) |

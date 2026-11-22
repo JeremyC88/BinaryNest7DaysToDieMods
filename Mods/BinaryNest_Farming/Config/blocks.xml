@@ -47,7 +47,8 @@
 			<property name="SortOrder2" value="0101" />
 		</block>
 
-		<!-- Wild / POI version. Spawned in the forest by biomes.xml. -->
+		<!-- Wild / POI version. Spawned in the forest by biomes.xml. Uses the
+		     bigger wild carrot model with white flower heads so it's easy to spot. -->
 		<block name="plantedCarrot3Harvest">
 			<property name="Extends" value="cropsHarvestableMaster" />
 			<!-- CreativeMode is never inherited, and the default shows the block in the creative menu. -->
@@ -55,7 +56,7 @@
 			<property name="CustomIcon" value="plantedCarrot1" />
 			<property name="DescriptionKey" value="plantedCarrot3HarvestDesc" />
 			<property name="Shape" value="ModelEntity" />
-			<property name="Model" value="#@modfolder:Resources/BinaryNestFarming.unity3d?CarrotHarvest" />
+			<property name="Model" value="#@modfolder:Resources/BinaryNestFarming.unity3d?CarrotWild" />
 			<drop event="Harvest" name="foodCropCarrot" count="1" tag="wildCropsHarvest" />
 			<drop event="Harvest" name="foodCropCarrot" prob="0.5" count="1" tag="bonusCropHarvest" />
 			<drop event="Harvest" name="foodCropCarrot" count="1" tag="farmerBonusHarvest" />
@@ -69,6 +70,8 @@
 			<property name="CreativeMode" value="None" />
 			<property name="CustomIcon" value="plantedCarrot1" />
 			<property name="DescriptionKey" value="plantedCarrot3HarvestDesc" />
+			<!-- Farmed carrots use the normal grown model, not the wild one. -->
+			<property name="Model" value="#@modfolder:Resources/BinaryNestFarming.unity3d?CarrotHarvest" />
 			<drop event="Harvest" name="foodCropCarrot" count="2" tag="cropHarvest" />
 			<drop event="Harvest" name="foodCropCarrot" prob="0.5" count="1" tag="bonusCropHarvest" />
 			<drop event="Harvest" name="foodCropCarrot" count="1" tag="farmerBonusHarvest" />

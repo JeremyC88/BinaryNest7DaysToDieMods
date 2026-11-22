@@ -74,14 +74,15 @@ Check new seed colours against vanilla and our existing seeds:
 | Units | 1 Blender unit = 1 metre = 1 game block |
 | Origin | Where the plant meets the soil (centre of the block's bottom face). The Unity builder moves the mesh down 0.5 m to match the game's block origin. |
 | Footprint | Stay inside the 1 × 1 m block. The grown carrot is about 0.8 × 0.9 m wide. |
-| Stages | Three: `<Crop>Seedling`, `<Crop>Growth`, `<Crop>Harvest`. The wild block uses the Harvest model. |
+| Stages | Three: `<Crop>Seedling`, `<Crop>Growth`, `<Crop>Harvest`. |
+| Wild model | If the wild plant is hard to spot in the landscape, give the wild block (`...3Harvest`) its own bigger `<Crop>Wild` model with something eye-catching, like the wild carrot's white flower heads. The player block (`...3HarvestPlayer`) then sets its own `Model` back to `<Crop>Harvest`. |
 | Determinism | Fixed random seed per stage, so rebuilding gives the same plant |
 
 ### Look
 
 - **Leaves are cut-out cards, like vanilla.** The vanilla potato and blueberry leaves are flat cards with a leaf texture whose transparent areas cut out the leaf's outline. That's what makes them look thin and detailed. Modelling every leaflet as solid geometry looked chunky and blocky next to them. The carrot uses one flat, slightly cupped card per frond with a feathery frond texture (`CarrotFrond.png`, RGBA). Mark the material as `cutout` in the builder's `MaterialDefs`. The shader then alpha-tests it and draws both sides, and the texture import keeps leaf coverage in distant mipmaps.
 - **Wheat is cards throughout:** thin crossed cards for each stem (a real wheat stem is only ~3-4 mm across; solid tubes looked far too thick), crossed cards for each ear with the spikelets and bristles in the texture, and single cards for the leaves. Everything shares one RGBA atlas (`WheatPlant.png`) with green and gold versions. Draw ear details in metres so the card's aspect doesn't stretch them.
-- **Solid parts** (carrot stalks and roots) are normal geometry. Model any thin solid parts on both sides, because non-cut-out materials hide back faces.
+- **Solid parts** (carrot stalks and roots) are normal geometry. Give visible solid parts a texture with some real detail (the carrot root has ring lines, darker marks and a crown), not a flat colour. Model any thin solid parts on both sides, because non-cut-out materials hide back faces.
 - **Muted colours:** the game's lighting makes the Unity Standard shader look brighter and more saturated than Blender. Choose darker, less saturated colours than looks right in Blender. Carrot leaf greens are around sRGB `(0.12–0.19, 0.26–0.32, 0.07–0.10)`.
 - **Variation:** generated textures with several colour variants (the carrot frond texture has two greens), picked per frond. Avoid one flat colour.
 - **Don't overcrowd or regularise:** too many leaves fanned evenly around the centre, all facing up, looks computer-made. Use fewer, narrower leaves, irregular spacing, a random roll per leaf, and mirror some textures. Leave small gaps in the texture (a few missing leaflets) and vary angles.
@@ -97,7 +98,7 @@ Budget for the grown stage's LOD0 against vanilla crops:
 | --- | --- |
 | Potato (vanilla) | 396 (no LODs) |
 | Blueberry (vanilla) | 2,000 |
-| **Carrot (ours)** | **662** (LOD1 374, LOD2 186), leaf cards |
+| **Carrot (ours)** | **710** (LOD1 374, LOD2 186), leaf cards. Wild: 1,018 |
 | **Wheat (ours)** | **1,056** (LOD1 704, LOD2 264), all cards |
 | Cotton (vanilla) | 5,602 |
 | Pumpkin (vanilla) | 12,538 |
