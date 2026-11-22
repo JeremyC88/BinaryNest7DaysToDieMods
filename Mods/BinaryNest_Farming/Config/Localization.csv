@@ -1,0 +1,15 @@
+Key,File,Type,UsedInMainMenu,NoTranslate,english
+foodCropCarrot,items,Food,,,Carrot
+foodCropCarrotDesc,items,Food,,,"A fresh carrot. Eat it raw, or craft 5 into Carrot Seeds to grow more."
+resourceCropWheat,items,Resources,,,Wheat
+resourceCropWheatDesc,items,Resources,,,"A bundle of wheat. Not edible raw. Craft 5 into Wheat Seeds to grow more."
+plantedCarrot1,blocks,Farming,,,Carrot Seeds
+plantedCarrot2,blocks,Farming,,,Carrot (Growing)
+plantedCarrot3Harvest,blocks,Farming,,,Carrot Plant
+plantedCarrot3HarvestPlayer,blocks,Farming,,,Carrot Plant
+plantedCarrot3HarvestDesc,blocks,Farming,,,"A carrot plant, ready to harvest."
+plantedWheat1,blocks,Farming,,,Wheat Seeds
+plantedWheat2,blocks,Farming,,,Wheat (Growing)
+plantedWheat3Harvest,blocks,Farming,,,Wheat Plant
+plantedWheat3HarvestPlayer,blocks,Farming,,,Wheat Plant
+plantedWheat3HarvestDesc,blocks,Farming,,,"A wheat plant, ready to harvest."

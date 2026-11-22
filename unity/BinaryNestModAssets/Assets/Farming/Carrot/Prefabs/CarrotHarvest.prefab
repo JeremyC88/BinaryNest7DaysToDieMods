@@ -97,7 +97,7 @@ GameObject:
   - component: {fileID: 3296866060307770895}
   m_Layer: 16
   m_Name: CarrotHarvest
-  m_TagString: Untagged
+  m_TagString: T_Block
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -137,5 +137,5 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.2610188
-  m_Center: {x: 0, y: -0.27584672, z: 0}
+  m_Radius: 0.26043007
+  m_Center: {x: 0, y: -0.30470383, z: 0}

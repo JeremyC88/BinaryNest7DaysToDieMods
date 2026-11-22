@@ -30,9 +30,7 @@
 			<property name="Tags" value="seedSkill,seedMulti" />
 			<property name="SoundPickup" value="seeds_generic2_grab" />
 			<property name="SoundPlace" value="seeds_generic2_place" />
-			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/plantedCarrot1.png exists. -->
-			<property name="CustomIcon" value="plantedPotato1" />
-			<property name="CustomIconTint" value="ff8c1a" />
+			<!-- Icon: UIAtlases/ItemIconAtlas/plantedCarrot1.png -->
 		</block>
 
 		<block name="plantedCarrot2">
@@ -52,6 +50,8 @@
 		<!-- Wild / POI version. Spawned in the forest by biomes.xml. -->
 		<block name="plantedCarrot3Harvest">
 			<property name="Extends" value="cropsHarvestableMaster" />
+			<!-- CreativeMode is never inherited, and the default shows the block in the creative menu. -->
+			<property name="CreativeMode" value="None" />
 			<property name="CustomIcon" value="plantedCarrot1" />
 			<property name="DescriptionKey" value="plantedCarrot3HarvestDesc" />
 			<property name="Shape" value="ModelEntity" />
@@ -116,6 +116,8 @@
 		<!-- Wild / POI version. Spawned in the desert by biomes.xml. -->
 		<block name="plantedWheat3Harvest">
 			<property name="Extends" value="cropsHarvestableMaster" />
+			<!-- CreativeMode is never inherited, and the default shows the block in the creative menu. -->
+			<property name="CreativeMode" value="None" />
 			<property name="CustomIcon" value="plantedWheat1" />
 			<property name="DescriptionKey" value="plantedWheat3HarvestDesc" />
 			<property name="Shape" value="ModelEntity" />

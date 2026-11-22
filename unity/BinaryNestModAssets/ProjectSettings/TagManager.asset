@@ -3,7 +3,12 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - GameTag0
+  - GameTag1
+  - GameTag2
+  - GameTag3
+  - T_Block
   layers:
   - Default
   - TransparentFX

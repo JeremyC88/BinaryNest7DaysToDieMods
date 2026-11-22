@@ -29,7 +29,25 @@ namespace BinaryNest.Editor
         const string BuildDir = "AssetBundles";
 
         // Same layer the game's own plant prefabs use on their root object.
+        // (The game resets the collider layer when it spawns the block anyway.)
         const int GamePlantLayer = 16;
+
+        // The game only treats a hit collider as a model block (so it can be
+        // aimed at, named and harvested) when its tag is "T_Block". See
+        // Voxel.raycastNew -> GameUtils.FindMasterBlockForEntityModelBlock.
+        //
+        // Bundles store tags as a POSITION in the project's tag list, not by
+        // name. All of the game's plant prefabs use custom tag position 4, so
+        // T_Block must be at position 4 in this project's tag list too.
+        const string BlockTag = "T_Block";
+        const int GameBlockTagIndex = 4;
+        static readonly string[] GameTagLayout =
+        {
+            // Positions 0-3 are other game tags we don't use; the names here
+            // are placeholders that only reserve the slots.
+            "GameTag0", "GameTag1", "GameTag2", "GameTag3",
+            BlockTag,
+        };
 
         // Model (FBX) name -> prefab name used in blocks.xml.
         static readonly (string crop, string model, string prefab)[] Models =
@@ -39,17 +57,23 @@ namespace BinaryNest.Editor
             ("Carrot", "CarrotHarvest",  "CarrotHarvest"),
         };
 
-        // Material name in the FBX -> colour and smoothness.
-        static readonly Dictionary<string, (Color color, float smoothness)> MaterialDefs = new()
+        // Material name in the FBX -> colour, smoothness and optional texture
+        // (relative to Assets/Farming/<crop>/Textures). Colours match the
+        // Blender build script (sRGB). Textured materials use white so the
+        // texture's own colours show.
+        static readonly Dictionary<string, (Color color, float smoothness, string texture)> MaterialDefs = new()
         {
-            ["CarrotLeaf"]  = (new Color(0.13f, 0.38f, 0.08f), 0.25f),
-            ["CarrotStalk"] = (new Color(0.30f, 0.52f, 0.16f), 0.20f),
-            ["CarrotRoot"]  = (new Color(0.88f, 0.36f, 0.05f), 0.35f),
+            ["CarrotLeaf"]  = (Color.white, 0.20f, "CarrotLeaf.png"),
+            ["CarrotStalk"] = (new Color(0.17f, 0.29f, 0.10f), 0.10f, null),
+            ["CarrotRoot"]  = (new Color(0.80f, 0.32f, 0.05f), 0.30f, null),
         };
 
         [MenuItem("BinaryNest/Build Farming Bundle")]
         public static void Build()
         {
+            if (!EnsureGameTags())
+                return;
+
             var prefabPaths = new List<string>();
             foreach (var (crop, model, prefab) in Models)
             {
@@ -92,6 +116,89 @@ namespace BinaryNest.Editor
             var dst = Path.Combine(modResources, BundleName);
             File.Copy(src, dst, true);
             Debug.Log($"[BinaryNest] Built {prefabPaths.Count} prefabs into {dst} ({new FileInfo(dst).Length / 1024} KB)");
+
+            VerifyTagsAgainstGame(dst);
+        }
+
+        // Loads a vanilla plant prefab from the game install and our built bundle,
+        // and checks both roots resolve to T_Block in this project. If they do, our
+        // tag sits at the same position as the game's.
+        const string GamePlantsBundle = @"C:\Program Files (x86)\Steam\steamapps\common\7 Days To Die\Data\Addressables\Standalone\automatic_assets_entities\plants.bundle";
+
+        static void VerifyTagsAgainstGame(string ourBundlePath)
+        {
+            if (!File.Exists(GamePlantsBundle))
+            {
+                Debug.LogWarning("[BinaryNest] Game install not found; skipped the tag check against vanilla plants.");
+                return;
+            }
+            AssetBundle game = null, ours = null;
+            try
+            {
+                game = AssetBundle.LoadFromFile(GamePlantsBundle);
+                ours = AssetBundle.LoadFromFile(ourBundlePath);
+                var vanilla = game.LoadAsset<GameObject>("Assets/AssetBundles/Automatic/Entities/Plants/potato_plant_harvestPrefab.prefab");
+                var vanillaTag = vanilla ? vanilla.tag : "<missing>";
+                var ok = vanillaTag == BlockTag;
+                foreach (var go in ours.LoadAllAssets<GameObject>())
+                {
+                    var match = go.tag == vanillaTag;
+                    ok &= match;
+                    Debug.Log($"[BinaryNest] Tag check: {go.name} = '{go.tag}', vanilla potato = '{vanillaTag}' -> {(match ? "match" : "MISMATCH")}");
+                }
+                if (ok) Debug.Log("[BinaryNest] Tag check passed.");
+                else Debug.LogError("[BinaryNest] Tag check FAILED: prefabs will not be targetable in game.");
+            }
+            finally
+            {
+                if (ours) ours.Unload(true);
+                if (game) game.Unload(true);
+            }
+        }
+
+        // Makes the project's tag list start with GameTagLayout, so "T_Block"
+        // is stored at the same position the game expects.
+        static bool EnsureGameTags()
+        {
+            var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            var tags = tagManager.FindProperty("tags");
+            var changed = false;
+            for (int i = 0; i < GameTagLayout.Length; i++)
+            {
+                if (i >= tags.arraySize)
+                {
+                    tags.InsertArrayElementAtIndex(i);
+                    changed = true;
+                }
+                var element = tags.GetArrayElementAtIndex(i);
+                if (element.stringValue != GameTagLayout[i])
+                {
+                    if (i == GameBlockTagIndex || string.IsNullOrEmpty(element.stringValue) || element.stringValue.StartsWith("GameTag"))
+                    {
+                        element.stringValue = GameTagLayout[i];
+                        changed = true;
+                    }
+                    else
+                    {
+                        Debug.LogError($"[BinaryNest] Tag slot {i} holds '{element.stringValue}', but the game layout needs '{GameTagLayout[i]}' there. Fix the tag list before building.");
+                        return false;
+                    }
+                }
+            }
+            if (changed)
+            {
+                tagManager.ApplyModifiedPropertiesWithoutUndo();
+                AssetDatabase.SaveAssets();
+                Debug.Log("[BinaryNest] Updated the tag list to match the game's layout.");
+            }
+
+            var actual = tags.GetArrayElementAtIndex(GameBlockTagIndex).stringValue;
+            if (actual != BlockTag)
+            {
+                Debug.LogError($"[BinaryNest] Tag slot {GameBlockTagIndex} is '{actual}', expected '{BlockTag}'.");
+                return false;
+            }
+            return true;
         }
 
         static void ConfigureImporter(string fbxPath, string crop)
@@ -111,13 +218,33 @@ namespace BinaryNest.Editor
 
             foreach (var (name, def) in MaterialDefs)
             {
-                var mat = GetOrCreateMaterial(crop, name, def.color, def.smoothness);
+                var mat = GetOrCreateMaterial(crop, name, def.color, def.smoothness, def.texture);
                 importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), name), mat);
             }
             importer.SaveAndReimport();
         }
 
-        static Material GetOrCreateMaterial(string crop, string name, Color color, float smoothness)
+        static Texture2D ConfigureTexture(string crop, string file)
+        {
+            var path = $"{FarmingRoot}/{crop}/Textures/{file}";
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+            {
+                Debug.LogError($"[BinaryNest] Missing texture {path}. Run the Blender build script first.");
+                return null;
+            }
+            importer.textureType = TextureImporterType.Default;
+            importer.sRGBTexture = true;
+            importer.mipmapEnabled = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.alphaSource = TextureImporterAlphaSource.None;
+            importer.textureCompression = TextureImporterCompression.Compressed;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        static Material GetOrCreateMaterial(string crop, string name, Color color, float smoothness, string texture)
         {
             var dir = $"{FarmingRoot}/{crop}/Materials";
             Directory.CreateDirectory(dir);
@@ -130,6 +257,7 @@ namespace BinaryNest.Editor
             }
             mat.shader = Shader.Find("Standard");
             mat.color = color;
+            mat.mainTexture = texture != null ? ConfigureTexture(crop, texture) : null;
             mat.SetFloat("_Glossiness", smoothness);
             mat.SetFloat("_Metallic", 0f);
             mat.enableInstancing = true;
@@ -138,13 +266,13 @@ namespace BinaryNest.Editor
         }
 
         // Layout copied from the game's plant prefabs (e.g. potato_plant_harvestPrefab):
-        //   <Prefab>        root, layer 16, collider around the base of the plant
+        //   <Prefab>        root, layer 16, tag T_Block, collider around the base of the plant
         //     <Model>       the mesh, moved down 0.5 so it sits on the bottom of the block
         static string BuildPrefab(string fbxPath, string crop, string prefabName)
         {
             var modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
 
-            var root = new GameObject(prefabName) { layer = GamePlantLayer };
+            var root = new GameObject(prefabName) { layer = GamePlantLayer, tag = BlockTag };
             var model = (GameObject)PrefabUtility.InstantiatePrefab(modelAsset);
             PrefabUtility.UnpackPrefabInstance(model, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             model.name = "Model";

@@ -97,7 +97,7 @@ GameObject:
   - component: {fileID: 1106004035017142133}
   m_Layer: 16
   m_Name: CarrotGrowth
-  m_TagString: Untagged
+  m_TagString: T_Block
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -137,5 +137,5 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.16087481
-  m_Center: {x: 0, y: -0.36786535, z: 0}
+  m_Radius: 0.15
+  m_Center: {x: 0, y: -0.36245364, z: 0}

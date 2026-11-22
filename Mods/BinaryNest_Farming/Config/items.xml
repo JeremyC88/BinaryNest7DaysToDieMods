@@ -5,9 +5,7 @@
 		<item name="foodCropCarrot">
 			<property name="Extends" value="foodCropPotato"/>
 			<property name="DescriptionKey" value="foodCropCarrotDesc"/>
-			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/foodCropCarrot.png exists. -->
-			<property name="CustomIcon" value="foodCropPotato"/>
-			<property name="CustomIconTint" value="ff8c1a"/>
+			<!-- Icon: UIAtlases/ItemIconAtlas/foodCropCarrot.png -->
 		</item>
 
 		<!-- Wheat: crafting resource only, not edible raw. Based on the vanilla cotton resource. -->

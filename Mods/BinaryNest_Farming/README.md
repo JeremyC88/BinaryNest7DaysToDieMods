@@ -11,27 +11,30 @@ Adds new crops to 7 Days to Die. See the [roadmap & spec](../../docs/roadmap/ada
 | --- | --- | --- |
 | Carrot | `foodCropCarrot` | Edible, same as Potato |
 | Wheat | `resourceCropWheat` | Resource, not edible |
-| Carrot (Seed) | `plantedCarrot1` | 5 Carrots, unlocks with Yucca seeds (seed skill level 8) |
-| Wheat (Seed) | `plantedWheat1` | 5 Wheat, unlocks with Corn seeds (seed skill level 18) |
+| Carrot Seeds | `plantedCarrot1` | 5 Carrots, unlocks with Yucca seeds (seed skill level 8) |
+| Wheat Seeds | `plantedWheat1` | 5 Wheat, unlocks with Corn seeds (seed skill level 18) |
 
 Growth: `planted<Crop>1` → `planted<Crop>2` → `planted<Crop>3HarvestPlayer`. Wild plants are `planted<Crop>3Harvest`.
 
-## Placeholders still to replace
+Display names come from `Config/Localization.csv`. The game only loads a mod's localization from a file with exactly that name.
 
-| What | Currently | Replace with |
-| --- | --- | --- |
-| Item icons (4) | Tinted vanilla icons via `CustomIcon` / `CustomIconTint` | 160×160 PNGs in `UIAtlases/ItemIconAtlas/`, named after the item (e.g. `foodCropCarrot.png`), then delete the placeholder lines |
-| ~~Carrot models (3 stages)~~ | ✅ Done: custom models in `Resources/BinaryNestFarming.unity3d` | |
-| Wheat models (3 stages) | Vanilla hops plant models | New models in the same asset bundle |
+## Status of art
 
-## Rebuilding the models
-
-1. **Models:** `blender --background --factory-startup --python art/farming/carrot/build_carrot.py` (from the repo root). This writes the FBX files into the Unity project and renders previews to `art/farming/carrot/previews/`.
-2. **Asset bundle:** run Unity 2022.3.62f2 on `unity/BinaryNestModAssets` with `-batchmode -quit -executeMethod BinaryNest.Editor.FarmingBundleBuilder.Build`, or use the **BinaryNest > Build Farming Bundle** menu in the editor. This writes `Resources/BinaryNestFarming.unity3d` into this mod.
-
-Because the mod now ships an asset bundle, multiplayer clients need the mod installed too, not just the server.
+| What | Status |
+| --- | --- |
+| Carrot models (3 stages) | ✅ Custom models in `Resources/BinaryNestFarming.unity3d` |
+| Carrot and Carrot Seeds icons | ✅ `UIAtlases/ItemIconAtlas/foodCropCarrot.png`, `plantedCarrot1.png` |
+| Wheat models (3 stages) | ⏳ PLACEHOLDER: vanilla hops models |
+| Wheat and Wheat Seeds icons | ⏳ PLACEHOLDER: tinted vanilla icons (`CustomIcon` / `CustomIconTint`) |
 
 Every placeholder line in the XML is marked with a `PLACEHOLDER` comment.
+
+## Rebuilding the art
+
+1. **Models, texture and icons:** `blender --background --factory-startup --python art/farming/carrot/build_carrot.py` (from the repo root). This writes the FBX models and leaf texture into the Unity project, the icons into `UIAtlases/ItemIconAtlas/`, and preview renders to `art/farming/carrot/previews/`.
+2. **Asset bundle:** run Unity 2022.3.62f2 on `unity/BinaryNestModAssets` with `-batchmode -quit -executeMethod BinaryNest.Editor.FarmingBundleBuilder.Build`, or use the **BinaryNest > Build Farming Bundle** menu in the editor. This writes `Resources/BinaryNestFarming.unity3d` into this mod and checks the prefabs' `T_Block` tag against the game's own plants.
+
+Because the mod ships an asset bundle, multiplayer clients need the mod installed too, not just the server.
 
 ## Testing
 

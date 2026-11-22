@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: 5950174237348844867}
   m_Layer: 16
   m_Name: CarrotSeedling
-  m_TagString: Untagged
+  m_TagString: T_Block
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
