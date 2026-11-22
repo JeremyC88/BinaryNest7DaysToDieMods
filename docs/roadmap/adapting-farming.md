@@ -4,7 +4,7 @@ Versions of [Adapting Farming](../ideas/farming.md) and what each one includes. 
 
 | Version | Theme | Status |
 | --- | --- | --- |
-| [v0.1](#v01-carrots-and-wheat) | Carrots and Wheat | Planned |
+| [v0.1](#v01-carrots-and-wheat) | Carrots and Wheat | In progress |
 | [v0.2+](#later-versions-tentative) | More crops, trees, mechanics | Tentative |
 
 ---

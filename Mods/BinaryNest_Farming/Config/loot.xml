@@ -1,0 +1,15 @@
+<configs>
+	<!--
+		Seeds go into the vanilla seed loot groups, so they appear anywhere vanilla
+		seeds already do (kitchen cupboards, seed bags, farming loot and so on).
+	-->
+	<append xpath="/lootcontainers/lootgroup[@name='seeds']">
+		<item name="plantedCarrot1"/>
+		<item name="plantedWheat1"/>
+	</append>
+
+	<append xpath="/lootcontainers/lootgroup[@name='seedsNoFlowers']">
+		<item name="plantedCarrot1" count="3,5"/>
+		<item name="plantedWheat1" count="3,5"/>
+	</append>
+</configs>

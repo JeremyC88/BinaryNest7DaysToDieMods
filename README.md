@@ -21,6 +21,7 @@ A collection of mods (modlets) for [7 Days to Die](https://7daystodie.com/), bui
 BinaryNest7DaysToDieMods/
 ├── README.md          # This file
 ├── docs/
+│   ├── guides/        # How-to guides (e.g. C# modding)
 │   ├── ideas/         # Design notes, one file per mod idea
 │   └── roadmap/       # Versioned specs: what goes in each release
 └── Mods/              # (planned) One folder per modlet
@@ -52,7 +53,7 @@ Mods that only change XML usually run with Easy Anti-Cheat (EAC) on. Mods with c
 
 ## Development notes
 
-- **XML first:** keep as much as possible to XPath patches in `Config/`. They're the easiest to keep compatible with game updates and with other mods.
+- **XML first:** keep as much as possible to XPath patches in `Config/`. They're the easiest to keep compatible with game updates and with other mods. When code is needed, follow the [C# modding guide](docs/guides/csharp-modding.md).
 - **Test in isolation, then together:** test each modlet on its own first, then with everything else through the Overhaul Mod.
 - **Game version:** each modlet's `ModInfo.xml` and README will say which game version it was built and tested on.
 

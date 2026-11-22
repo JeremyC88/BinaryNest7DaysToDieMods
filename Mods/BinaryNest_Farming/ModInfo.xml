@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="BinaryNest_Farming" />
+	<DisplayName value="Adapting Farming" />
+	<Description value="Adds new crops to grow, find and trade. v0.1: Carrots and Wheat." />
+	<Author value="BinaryNest" />
+	<Version value="0.1.0" />
+	<Website value="" />
+</xml>

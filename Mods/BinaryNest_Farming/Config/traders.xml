@@ -1,0 +1,12 @@
+<configs>
+	<!--
+		Trader Rekt (trader id 8) stocks 2-5 random, unique items from the "seeds"
+		trader group each restock. Adding the new seeds to that group puts them in
+		his random selection, so they won't be there every time.
+		Note: general traders can also roll one item from this group.
+	-->
+	<append xpath="/traders/trader_item_groups/trader_item_group[@name='seeds']">
+		<item name="plantedCarrot1"/>
+		<item name="plantedWheat1"/>
+	</append>
+</configs>

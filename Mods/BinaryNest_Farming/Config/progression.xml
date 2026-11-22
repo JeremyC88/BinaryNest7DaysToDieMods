@@ -1,0 +1,15 @@
+<configs>
+	<!--
+		Seed recipe unlocks, using the vanilla seed crafting skill (craftingSeeds):
+		  Carrot Seed: same level as Yucca (level 8)
+		  Wheat Seed:  same level as Corn  (level 18)
+	-->
+
+	<!-- Carrot alongside Yucca -->
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingSeeds']/display_entry/unlock_entry[@item='plantedYucca1']/@item">,plantedCarrot1</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingSeeds']/effect_group/passive_effect[@name='RecipeTagUnlocked'][@tags='plantedYucca1']/@tags">,plantedCarrot1</append>
+
+	<!-- Wheat alongside Corn -->
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingSeeds']/display_entry/unlock_entry[@item='plantedCorn1']/@item">,plantedWheat1</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingSeeds']/effect_group/passive_effect[@name='RecipeTagUnlocked'][@tags='plantedCorn1']/@tags">,plantedWheat1</append>
+</configs>

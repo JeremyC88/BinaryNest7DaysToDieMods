@@ -1,0 +1,144 @@
+<configs>
+	<!--
+		Each crop follows the vanilla potato pattern:
+		  planted<Crop>1               seed / seedling (the inventory "seed" item)
+		  planted<Crop>2               part grown
+		  planted<Crop>3HarvestPlayer  grown, player planted (2 crops + seed chance)
+		  planted<Crop>3Harvest        grown, wild / POI (1 crop, used by biomes.xml)
+
+		PLACEHOLDER MODELS: every Model below points at a vanilla plant.
+		Replace with the new renders from the asset bundle, e.g.
+		  #@modfolder:Resources/BinaryNestFarming.unity3d?CarrotSeedling
+	-->
+	<append xpath="/blocks">
+
+		<!-- ============================== CARROT ============================== -->
+		<block name="plantedCarrot1">
+			<property name="Extends" value="cropsGrowingMaster" param1="CustomIcon" />
+			<property name="CreativeMode" value="Player" />
+			<property class="PlantGrowing">
+				<property name="Next" value="plantedCarrot2" />
+			</property>
+			<property name="UnlockedBy" value="craftingSeeds" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Plants/potato_plant_sproutPrefab.prefab" />
+			<property name="PlaceAsRandomRotation" value="true" />
+			<drop event="Destroy" name="plantedCarrot1" count="1" />
+			<property name="SortOrder1" value="B958" />
+			<property name="SortOrder2" value="0100" />
+			<property name="Tags" value="seedSkill,seedMulti" />
+			<property name="SoundPickup" value="seeds_generic2_grab" />
+			<property name="SoundPlace" value="seeds_generic2_place" />
+			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/plantedCarrot1.png exists. -->
+			<property name="CustomIcon" value="plantedPotato1" />
+			<property name="CustomIconTint" value="ff8c1a" />
+		</block>
+
+		<block name="plantedCarrot2">
+			<property name="Extends" value="cropsGrowingMaster" />
+			<property name="CreativeMode" value="None" />
+			<property class="PlantGrowing">
+				<property name="Next" value="plantedCarrot3HarvestPlayer" />
+			</property>
+			<property name="CustomIcon" value="plantedCarrot1" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Plants/potato_plant_growthPrefab.prefab" />
+			<drop event="Destroy" name="plantedCarrot1" count="1" />
+			<property name="SortOrder1" value="B958" />
+			<property name="SortOrder2" value="0101" />
+		</block>
+
+		<!-- Wild / POI version. Spawned in the forest by biomes.xml. -->
+		<block name="plantedCarrot3Harvest">
+			<property name="Extends" value="cropsHarvestableMaster" />
+			<property name="CustomIcon" value="plantedCarrot1" />
+			<property name="DescriptionKey" value="plantedCarrot3HarvestDesc" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Plants/potato_plant_harvestPrefab.prefab" />
+			<drop event="Harvest" name="foodCropCarrot" count="1" tag="wildCropsHarvest" />
+			<drop event="Harvest" name="foodCropCarrot" prob="0.5" count="1" tag="bonusCropHarvest" />
+			<drop event="Harvest" name="foodCropCarrot" count="1" tag="farmerBonusHarvest" />
+			<property name="SortOrder1" value="B958" />
+			<property name="SortOrder2" value="0102" />
+		</block>
+
+		<!-- Player planted version. -->
+		<block name="plantedCarrot3HarvestPlayer">
+			<property name="Extends" value="plantedCarrot3Harvest" />
+			<property name="CreativeMode" value="None" />
+			<property name="CustomIcon" value="plantedCarrot1" />
+			<property name="DescriptionKey" value="plantedCarrot3HarvestDesc" />
+			<drop event="Harvest" name="foodCropCarrot" count="2" tag="cropHarvest" />
+			<drop event="Harvest" name="foodCropCarrot" prob="0.5" count="1" tag="bonusCropHarvest" />
+			<drop event="Harvest" name="foodCropCarrot" count="1" tag="farmerBonusHarvest" />
+			<drop event="Harvest" name="plantedCarrot1" count="1" tag="farmerBonusSeed" />
+			<drop event="Destroy" name="plantedCarrot1" count="1" prob="0.5" />
+			<property name="SortOrder2" value="0103" />
+		</block>
+
+		<!-- ============================== WHEAT =============================== -->
+		<block name="plantedWheat1">
+			<property name="Extends" value="cropsGrowingMaster" param1="CustomIcon" />
+			<property name="CreativeMode" value="Player" />
+			<property class="PlantGrowing">
+				<property name="Next" value="plantedWheat2" />
+			</property>
+			<property name="UnlockedBy" value="craftingSeeds" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Plants/plantHopsSproutPrefab.prefab" />
+			<property name="PlaceAsRandomRotation" value="true" />
+			<drop event="Destroy" name="plantedWheat1" count="1" />
+			<property name="SortOrder1" value="B960" />
+			<property name="SortOrder2" value="0100" />
+			<property name="Tags" value="seedSkill,seedMulti" />
+			<property name="SoundPickup" value="seeds_corn_grab" />
+			<property name="SoundPlace" value="seeds_corn_place" />
+			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/plantedWheat1.png exists. -->
+			<property name="CustomIcon" value="plantedCorn1" />
+			<property name="CustomIconTint" value="e6c35c" />
+		</block>
+
+		<block name="plantedWheat2">
+			<property name="Extends" value="cropsGrowingMaster" />
+			<property name="CreativeMode" value="None" />
+			<property class="PlantGrowing">
+				<property name="Next" value="plantedWheat3HarvestPlayer" />
+			</property>
+			<property name="CustomIcon" value="plantedWheat1" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Plants/plantHopsGrowthPrefab.prefab" />
+			<drop event="Destroy" name="plantedWheat1" count="1" />
+			<property name="SortOrder1" value="B960" />
+			<property name="SortOrder2" value="0101" />
+		</block>
+
+		<!-- Wild / POI version. Spawned in the desert by biomes.xml. -->
+		<block name="plantedWheat3Harvest">
+			<property name="Extends" value="cropsHarvestableMaster" />
+			<property name="CustomIcon" value="plantedWheat1" />
+			<property name="DescriptionKey" value="plantedWheat3HarvestDesc" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Plants/plantHopsHarvestPrefab.prefab" />
+			<drop event="Harvest" name="resourceCropWheat" count="1" tag="wildCropsHarvest" />
+			<drop event="Harvest" name="resourceCropWheat" prob="0.5" count="1" tag="bonusCropHarvest" />
+			<drop event="Harvest" name="resourceCropWheat" count="1" tag="farmerBonusHarvest" />
+			<property name="SortOrder1" value="B960" />
+			<property name="SortOrder2" value="0102" />
+		</block>
+
+		<!-- Player planted version. -->
+		<block name="plantedWheat3HarvestPlayer">
+			<property name="Extends" value="plantedWheat3Harvest" />
+			<property name="CreativeMode" value="None" />
+			<property name="CustomIcon" value="plantedWheat1" />
+			<property name="DescriptionKey" value="plantedWheat3HarvestDesc" />
+			<drop event="Harvest" name="resourceCropWheat" count="2" tag="cropHarvest" />
+			<drop event="Harvest" name="resourceCropWheat" prob="0.5" count="1" tag="bonusCropHarvest" />
+			<drop event="Harvest" name="resourceCropWheat" count="1" tag="farmerBonusHarvest" />
+			<drop event="Harvest" name="plantedWheat1" count="1" tag="farmerBonusSeed" />
+			<drop event="Destroy" name="plantedWheat1" count="1" prob="0.5" />
+			<property name="SortOrder2" value="0103" />
+		</block>
+
+	</append>
+</configs>

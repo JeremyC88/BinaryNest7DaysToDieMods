@@ -1,0 +1,24 @@
+<configs>
+	<append xpath="/items">
+
+		<!-- Carrot: edible, same food values as the vanilla potato. -->
+		<item name="foodCropCarrot">
+			<property name="Extends" value="foodCropPotato"/>
+			<property name="DescriptionKey" value="foodCropCarrotDesc"/>
+			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/foodCropCarrot.png exists. -->
+			<property name="CustomIcon" value="foodCropPotato"/>
+			<property name="CustomIconTint" value="ff8c1a"/>
+		</item>
+
+		<!-- Wheat: crafting resource only, not edible raw. Based on the vanilla cotton resource. -->
+		<item name="resourceCropWheat">
+			<property name="Extends" value="resourceCropCottonPlant"/>
+			<property name="DescriptionKey" value="resourceCropWheatDesc"/>
+			<property name="Group" value="Resources,Food/Cooking"/>
+			<!-- PLACEHOLDER ICON: remove these two lines once UIAtlases/ItemIconAtlas/resourceCropWheat.png exists. -->
+			<property name="CustomIcon" value="plantedHop3Harvest"/>
+			<property name="CustomIconTint" value="e6c35c"/>
+		</item>
+
+	</append>
+</configs>

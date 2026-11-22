@@ -1,0 +1,21 @@
+<configs>
+	<!--
+		Wild crops. Each one is added straight after the vanilla plant it copies,
+		with the same spawn chance:
+		  Wild carrot: pine forest, next to wild Goldenrod
+		  Wild wheat:  desert, next to wild Yucca
+	-->
+
+	<!-- Carrot: pine forest (Goldenrod spawns at .03) -->
+	<insertAfter xpath="/worldgeneration/biomes/biome[@name='pine_forest']//decoration[@blockname='plantedGoldenrod3Harvest']">
+		<decoration type="block" blockname="plantedCarrot3Harvest" prob=".03" rotatemax="7"/>
+	</insertAfter>
+
+	<!-- Wheat: desert (Yucca spawns at .03 in some sub-biomes and .002 in others) -->
+	<insertAfter xpath="/worldgeneration/biomes/biome[@name='desert']//decoration[@blockname='plantedYucca3Harvest'][@prob='.03']">
+		<decoration type="block" blockname="plantedWheat3Harvest" prob=".03" rotatemax="3"/>
+	</insertAfter>
+	<insertAfter xpath="/worldgeneration/biomes/biome[@name='desert']//decoration[@blockname='plantedYucca3Harvest'][@prob='.002']">
+		<decoration type="block" blockname="plantedWheat3Harvest" prob=".002" rotatemax="3"/>
+	</insertAfter>
+</configs>

@@ -1,0 +1,12 @@
+<configs>
+	<!-- Seed recipes, matching the vanilla seed recipes. Unlocks are set in progression.xml. -->
+	<append xpath="/recipes">
+		<recipe name="plantedCarrot1" count="1" craft_time="1" tags="learnable,packMuleCrafting">
+			<ingredient name="foodCropCarrot" count="5"/>
+		</recipe>
+
+		<recipe name="plantedWheat1" count="1" craft_time="1" tags="learnable,packMuleCrafting">
+			<ingredient name="resourceCropWheat" count="5"/>
+		</recipe>
+	</append>
+</configs>
