@@ -19,6 +19,8 @@ Shader "BinaryNest/CropWind"
         _MainTex ("Albedo", 2D) = "white" {}
         _Glossiness ("Smoothness", Range(0, 1)) = 0.2
         _Metallic ("Metallic", Range(0, 1)) = 0
+        _Cutoff ("Alpha cutoff (cut-out leaf cards)", Range(0, 1)) = 0.5
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull (Off for leaf cards)", Float) = 2
 
         [Header(Wind)]
         _SwayHeight ("Full sway at height (m)", Float) = 0.5
@@ -31,11 +33,14 @@ Shader "BinaryNest/CropWind"
     SubShader
     {
         // Batching would merge plants and lose each plant's own origin.
-        Tags { "RenderType" = "Opaque" "DisableBatching" = "True" }
+        // Cut-out queue/type so alpha-tested leaf cards work; solid materials
+        // simply have alpha 1 everywhere.
+        Tags { "Queue" = "AlphaTest" "RenderType" = "TransparentCutout" "DisableBatching" = "True" }
         LOD 200
+        Cull [_Cull]
 
         CGPROGRAM
-        #pragma surface surf Standard vertex:vert addshadow fullforwardshadows
+        #pragma surface surf Standard vertex:vert addshadow fullforwardshadows alphatest:_Cutoff
         #pragma multi_compile_instancing
         #pragma target 3.0
 
@@ -55,6 +60,7 @@ Shader "BinaryNest/CropWind"
         struct Input
         {
             float2 uv_MainTex;
+            float facing : VFACE;   // which side of a double-sided card we're seeing
         };
 
         void vert(inout appdata_full v)
@@ -92,7 +98,9 @@ Shader "BinaryNest/CropWind"
             o.Albedo = c.rgb;
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
-            o.Alpha = 1.0;
+            o.Alpha = c.a;
+            // Back of a double-sided card: flip the normal so it's lit correctly.
+            o.Normal = float3(0, 0, IN.facing > 0 ? 1 : -1);
         }
         ENDCG
     }

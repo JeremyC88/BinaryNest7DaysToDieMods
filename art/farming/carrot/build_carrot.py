@@ -10,10 +10,14 @@ Outputs:
     art/farming/carrot/previews/*.png          preview renders
     unity/BinaryNestModAssets/Assets/Farming/Carrot/
         Models/Carrot<Stage>.fbx               one model per growth stage
-        Textures/CarrotLeaf.png                leaf texture (4 green variants)
+        Textures/CarrotFrond.png               frond texture with alpha (2 green variants)
 
 Scale: 1 Blender unit = 1 metre = 1 game block. Each model's origin is where
 the plant meets the soil.
+
+Leaves are drawn like the vanilla potato and blueberry leaves: one flat card
+per frond, textured with a feathery leaf whose transparent areas cut out the
+fine outline. That keeps them thin and detailed instead of chunky geometry.
 """
 
 import math
@@ -22,7 +26,7 @@ import random
 
 import bmesh
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
@@ -34,21 +38,21 @@ for d in (EXPORT_DIR, TEXTURE_DIR, PREVIEW_DIR):
     os.makedirs(d, exist_ok=True)
 
 STAGES = [
-    dict(name="CarrotSeedling", fronds=3,  length=(0.09, 0.13), pairs=2, shoulder=0.0,   seed=11),
-    dict(name="CarrotGrowth",   fronds=6,  length=(0.20, 0.28), pairs=3, shoulder=0.016, seed=22),
-    dict(name="CarrotHarvest",  fronds=10, length=(0.34, 0.46), pairs=4, shoulder=0.032, seed=33),
+    dict(name="CarrotSeedling", fronds=3,  length=(0.09, 0.13), shoulder=0.0,   seed=11),
+    dict(name="CarrotGrowth",   fronds=6,  length=(0.20, 0.28), shoulder=0.016, seed=22),
+    dict(name="CarrotHarvest",  fronds=10, length=(0.34, 0.46), shoulder=0.032, seed=33),
 ]
 
-# Four slightly different, muted greens. One is picked per frond.
-LEAF_VARIANTS = [
-    (0.135, 0.285, 0.075),
-    (0.165, 0.315, 0.090),
-    (0.115, 0.255, 0.070),
-    (0.185, 0.305, 0.100),
+# Two muted greens, one per texture tile; each frond picks one (sRGB).
+FROND_VARIANTS = [
+    (0.15, 0.30, 0.08),
+    (0.19, 0.34, 0.10),
 ]
 STALK_RGB = (0.17, 0.29, 0.10)
 ROOT_RGB = (0.80, 0.32, 0.05)
-LEAF_TEX_SIZE = (256, 64)  # 4 tiles of 64x64, one per variant
+FROND_TILE = (256, 512)    # one frond per tile: u across the frond, v from base to tip
+FROND_WIDTH = 0.55         # card width as a fraction of the frond's length
+CARD_START = 0.22          # the leafy card starts this far along the stalk
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -56,46 +60,126 @@ scene.unit_settings.system = "METRIC"
 
 
 # --------------------------------------------------------------------------
-# Leaf texture: midrib, side veins, darker edges and base, lighter tips
+# Frond texture (RGBA): a pinnate carrot leaf with finely divided leaflets.
+# Drawn at 2x and averaged down for soft edges.
 # --------------------------------------------------------------------------
-def make_leaf_texture():
-    w, h = LEAF_TEX_SIZE
-    tile = w // len(LEAF_VARIANTS)
-    rng = random.Random(7)
+def make_frond_texture():
+    tw, th = FROND_TILE
+    ss = 2
+    W, H = tw * ss * len(FROND_VARIANTS), th * ss
+    rgba = [None] * (W * H)
+
+    def put(x, y, col):
+        if 0 <= x < W and 0 <= y < H:
+            rgba[y * W + x] = col
+
+    def ellipse(cx, cy, rx, ry, ang, col):
+        """Filled, rotated ellipse in pixel space."""
+        ca, sa = math.cos(ang), math.sin(ang)
+        ext = int(max(rx, ry)) + 1
+        for y in range(int(cy) - ext, int(cy) + ext + 1):
+            for x in range(int(cx) - ext, int(cx) + ext + 1):
+                dx, dy = x - cx, y - cy
+                lx, ly = dx * ca + dy * sa, -dx * sa + dy * ca
+                if (lx / rx) ** 2 + (ly / ry) ** 2 <= 1.0:
+                    put(x, y, col)
+
+    def line(x0, y0, x1, y1, r, col):
+        steps = int(max(abs(x1 - x0), abs(y1 - y0)) / max(r * 0.7, 0.7)) + 1
+        for i in range(steps + 1):
+            t = i / steps
+            ellipse(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, r, r, 0.0, col)
+
+    def shade(rgb, k):
+        return (min(rgb[0] * k, 1.0), min(rgb[1] * k, 1.0), min(rgb[2] * k, 1.0), 1.0)
+
+    def half_width(v):
+        """Frond outline: widest about a third of the way up, narrow tip."""
+        if v < 0.32:
+            return 0.46 * (v / 0.32) ** 0.55
+        return 0.46 * max(1.0 - (v - 0.32) / 0.68, 0.0) ** 0.85
+
+    for variant, base_rgb in enumerate(FROND_VARIANTS):
+        rng = random.Random(100 + variant)
+        ox = variant * tw * ss
+
+        def px_u(u):
+            return ox + u * tw * ss
+
+        def px_v(v):
+            return v * th * ss
+
+        stem = shade(base_rgb, 1.35)
+        levels = 13                                   # pairs of side branches (pinnae)
+        for k in range(levels):
+            v0 = 0.05 + 0.9 * k / levels
+            for side in (-1, 1):
+                v0s = v0 + (0.02 if side > 0 else 0.0)   # slightly alternate sides
+                hw = half_width(min(v0s + 0.06, 1.0))
+                if hw < 0.03:
+                    continue
+                u1 = 0.5 + side * hw * 0.95
+                v1 = min(v0s + hw * 0.55 + 0.02, 0.995)
+                x0, y0, x1, y1 = px_u(0.5), px_v(v0s), px_u(u1), px_v(v1)
+                dirx, diry = x1 - x0, y1 - y0
+                blen = math.hypot(dirx, diry)
+                bang = math.atan2(diry, dirx)
+                n = max(3, int(hw * 16))              # leaflets along the branch
+                for j in range(n):
+                    f = (j + 0.6) / n
+                    cx, cy = x0 + dirx * f, y0 + diry * f
+                    plen = blen * (0.22 - 0.10 * f) * rng.uniform(0.85, 1.15)
+                    for up in (1, -1):
+                        a = bang + up * math.radians(rng.uniform(38, 55))
+                        col = shade(base_rgb, rng.uniform(0.85, 1.12) * (0.9 + 0.2 * v0s))
+                        # 2-3 narrow lobes per leaflet: the feathery carrot look
+                        for lobe in range(rng.choice((2, 3))):
+                            la = a + math.radians((lobe - 1) * 14)
+                            ex = cx + math.cos(la) * plen * 0.5
+                            ey = cy + math.sin(la) * plen * 0.5
+                            ellipse(ex, ey, plen * 0.5, max(plen * 0.08, 1.4), la, col)
+                line(x0, y0, x1, y1, 1.4, stem)
+        line(px_u(0.5), px_v(0.0), px_u(0.5), px_v(0.97), 2.4, stem)   # main stem
+
+    # Average 2x2 down. Transparent pixels keep the leaf colour so filtered
+    # edges don't get dark fringes.
+    fill = (*FROND_VARIANTS[0], 0.0)
+    w, h = W // ss, H // ss
     px = [0.0] * (w * h * 4)
     for y in range(h):
-        v = (y + 0.5) / h
         for x in range(w):
-            variant = x // tile
-            u = ((x % tile) + 0.5) / tile
-            r, g, b = LEAF_VARIANTS[variant]
-            side = abs(u - 0.5) * 2.0                     # 0 at midrib, 1 at edge
-            shade = (0.78 + 0.30 * v) * (1.0 - 0.28 * side * side)
-            vein = (v - side * 0.55) * 7.0
-            if side < 0.07:                                # midrib
-                shade *= 1.22
-                r, g, b = r + 0.015, g + 0.015, b + 0.005
-            elif (vein - math.floor(vein)) < 0.10 and side < 0.85:  # side veins
-                shade *= 1.07
-            shade *= 1.0 + rng.uniform(-0.05, 0.05)
+            r = g = b = 0.0
+            n_col = 0
+            for sy in range(ss):
+                for sx in range(ss):
+                    c = rgba[(y * ss + sy) * W + x * ss + sx]
+                    if c is not None:
+                        r += c[0]
+                        g += c[1]
+                        b += c[2]
+                        n_col += 1
             i = (y * w + x) * 4
-            px[i:i + 4] = (min(r * shade, 1), min(g * shade, 1), min(b * shade, 1), 1.0)
-    img = bpy.data.images.new("CarrotLeaf", w, h, alpha=False)
+            if n_col:
+                px[i:i + 4] = (r / n_col, g / n_col, b / n_col, n_col / (ss * ss))
+            else:
+                px[i:i + 4] = fill
+    img = bpy.data.images.new("CarrotFrond", w, h, alpha=True)
+    img.alpha_mode = "STRAIGHT"
     img.pixels = px
-    img.filepath_raw = os.path.join(TEXTURE_DIR, "CarrotLeaf.png")
+    img.filepath_raw = os.path.join(TEXTURE_DIR, "CarrotFrond.png")
     img.file_format = "PNG"
     img.save()
     return img
 
 
-LEAF_IMAGE = make_leaf_texture()
+FROND_IMAGE = make_frond_texture()
 
 
 def srgb_to_linear(c):
     return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 
 
-def make_material(name, rgb, roughness=0.6, image=None):
+def make_material(name, rgb, roughness=0.6, image=None, cutout=False):
     """rgb is an sRGB colour, the same values Unity's material colour uses."""
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
@@ -108,12 +192,15 @@ def make_material(name, rgb, roughness=0.6, image=None):
         tex.image = image
         tex.interpolation = "Linear"
         mat.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+        if cutout:
+            mat.node_tree.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
+    mat.use_backface_culling = False
     mat.diffuse_color = (*rgb, 1.0)
     return mat
 
 
 MAT_STALK = make_material("CarrotStalk", STALK_RGB, 0.8)
-MAT_LEAF = make_material("CarrotLeaf", LEAF_VARIANTS[0], 0.55, LEAF_IMAGE)
+MAT_LEAF = make_material("CarrotLeaf", (1, 1, 1), 0.55, FROND_IMAGE, cutout=True)
 MAT_ROOT = make_material("CarrotRoot", ROOT_RGB, 0.45)
 MAT_SOIL = make_material("PreviewSoil", (0.16, 0.10, 0.06), 0.95)
 MAT_INDEX = {"stalk": 0, "leaf": 1, "root": 2}
@@ -151,108 +238,57 @@ def add_tube(bm, points, r0, r1, sides, mat):
             f.smooth = True
 
 
-# Lobed leaflet outlines in local (x = width, y = length) space, 0..1 long,
-# one per level of detail.
-LEAFLET_OUTLINE = [
-    (-0.30, 0.16), (-0.14, 0.24), (-0.44, 0.34), (-0.18, 0.44), (-0.38, 0.58),
-    (-0.13, 0.64), (-0.24, 0.80), (-0.06, 0.82),
-    (0.0, 1.0),
-    (0.06, 0.82), (0.24, 0.80), (0.13, 0.64), (0.38, 0.58), (0.18, 0.44),
-    (0.44, 0.34), (0.14, 0.24), (0.30, 0.16),
-]
-LEAFLET_OUTLINE_MED = [
-    (-0.40, 0.30), (-0.16, 0.44), (-0.32, 0.64), (-0.08, 0.80),
-    (0.0, 1.0),
-    (0.08, 0.80), (0.32, 0.64), (0.16, 0.44), (0.40, 0.30),
-]
-LEAFLET_OUTLINE_LOW = [(-0.40, 0.40), (0.0, 1.0), (0.40, 0.40)]
-
 # Levels of detail. LOD0 is the full model; the game switches to the others
 # as the plant gets smaller on screen. All LODs use the same random seed, so
 # fronds sit in the same places.
 LODS = [
-    dict(outline=LEAFLET_OUTLINE,     stalk_sides=5, stalk_points=10, root_sides=12, root_rings=9, pair_drop=0, leaflet_scale=1.00),
-    dict(outline=LEAFLET_OUTLINE_MED, stalk_sides=4, stalk_points=6,  root_sides=8,  root_rings=6, pair_drop=0, leaflet_scale=1.05),
-    dict(outline=LEAFLET_OUTLINE_LOW, stalk_sides=3, stalk_points=4,  root_sides=6,  root_rings=4, pair_drop=2, leaflet_scale=1.35),
+    dict(card_segs=6, stalk_sides=5, stalk_points=5, root_sides=12, root_rings=9),
+    dict(card_segs=4, stalk_sides=4, stalk_points=4, root_sides=8,  root_rings=6),
+    dict(card_segs=2, stalk_sides=3, stalk_points=3, root_sides=6,  root_rings=4),
 ]
 
 
-def add_leaflet(bm, uv_layer, base, direction, normal, size, variant, outline=LEAFLET_OUTLINE):
-    """Lobed leaflet with a raised midrib, modelled on both sides, with UVs
-    into the leaf texture tile for its colour variant."""
-    direction = direction.normalized()
-    side = normal.cross(direction).normalized()
-    normal = direction.cross(side).normalized()
-
-    def uv(x, y):
-        u = min(max(0.5 + x, 0.03), 0.97)
-        return Vector(((variant + u) / len(LEAF_VARIANTS), y))
-
-    pts = [(0.0, 0.0, 0.0)]                              # base
-    pts += [(0.0, 0.40, 0.07), (0.0, 0.72, 0.05)]        # raised midrib points
-    pts += [(x, y, -abs(x) * 0.30) for x, y in outline]
-
-    def world(x, y, lift):
-        return base + side * x * size + direction * y * size + normal * lift * size
-
-    # Triangles as indices into pts: fan the outline around the two midrib
-    # points (lower half -> pts[1], upper half -> pts[2]), plus a bridging
-    # triangle on each side where the fan switches centre.
-    ring = [0] + list(range(3, len(pts)))
-    tris = []
-    for i in range(len(ring)):
-        a, c = ring[i], ring[(i + 1) % len(ring)]
-        lower = pts[a][1] <= 0.5 and pts[c][1] <= 0.5
-        tris.append((1 if lower else 2, a, c))
-    for i in range(len(ring)):
-        a, c = ring[i], ring[(i + 1) % len(ring)]
-        if (pts[a][1] <= 0.5) != (pts[c][1] <= 0.5):
-            pivot = a if pts[a][1] <= 0.5 else c
-            tris.append((1, pivot, 2))
-
-    for back in (False, True):
-        vs = [bm.verts.new(world(*p)) for p in pts]
-        for tri in tris:
-            p0, p1, p2 = (vs[i].co for i in tri)
-            facing = (p1 - p0).cross(p2 - p0).dot(normal)
-            if (facing < 0) != back:
-                tri = tri[::-1]
-            f = bm.faces.new([vs[i] for i in tri])
+def add_frond_card(bm, uv_layer, p0, p1, p2, width, segs, variant):
+    """One flat, slightly cupped card following the frond's curve, drawn from
+    both sides by the shader (Cull Off). The texture's alpha cuts out the leaf."""
+    left, mid, right = [], [], []
+    for i in range(segs + 1):
+        t = CARD_START + (1.0 - CARD_START) * i / segs
+        c = bezier(p0, p1, p2, t)
+        tan = bezier_tangent(p0, p1, p2, t)
+        side = tan.cross(Vector((0, 0, 1)))
+        side = side.normalized() if side.length > 1e-6 else Vector((1, 0, 0))
+        normal = side.cross(tan).normalized()
+        cup = normal * width * 0.10          # edges sit a little below the midrib
+        left.append(bm.verts.new(c - side * width * 0.5 - cup))
+        mid.append(bm.verts.new(c))
+        right.append(bm.verts.new(c + side * width * 0.5 - cup))
+    tiles = len(FROND_VARIANTS)
+    for i in range(segs):
+        for quad, us in (((left[i], mid[i], mid[i + 1], left[i + 1]), (0.0, 0.5, 0.5, 0.0)),
+                         ((mid[i], right[i], right[i + 1], mid[i + 1]), (0.5, 1.0, 1.0, 0.5))):
+            f = bm.faces.new(quad)
             f.material_index = MAT_INDEX["leaf"]
             f.smooth = True
-            for loop in f.loops:
-                p = pts[vs.index(loop.vert)]
-                loop[uv_layer].uv = uv(p[0], p[1])
+            for loop, u, row in zip(f.loops, us, (i, i, i + 1, i + 1)):
+                loop[uv_layer].uv = Vector(((variant + u) / tiles, row / segs))
 
 
-def add_frond(bm, uv_layer, rng, azimuth, length, pairs, base_offset=Vector(), lod=LODS[0]):
+def add_frond(bm, uv_layer, rng, azimuth, length, lod):
     out = Vector((math.cos(azimuth), math.sin(azimuth), 0))
     elev = math.radians(rng.uniform(55, 75))
     droop = rng.uniform(0.15, 0.35)
-    variant = rng.randrange(len(LEAF_VARIANTS))
-    p0 = base_offset + out * 0.004
+    variant = rng.randrange(len(FROND_VARIANTS))
+    width = length * FROND_WIDTH * rng.uniform(0.9, 1.1)
+    p0 = out * 0.004
     p1 = p0 + (out * math.cos(elev) + Vector((0, 0, math.sin(elev)))) * length * 0.6
     p2 = p0 + out * length * (0.55 + droop) + Vector((0, 0, length * (0.85 - droop)))
 
+    # thin stalk (petiole) up to just past where the leafy card begins
     n = lod["stalk_points"]
-    add_tube(bm, [bezier(p0, p1, p2, i / (n - 1)) for i in range(n)],
-             length * 0.022, length * 0.008, lod["stalk_sides"], MAT_INDEX["stalk"])
-
-    pairs = max(1, pairs - lod["pair_drop"])
-    leaflet_size = length * 0.30 * lod["leaflet_scale"]
-    for k in range(pairs):
-        t = 0.35 + 0.55 * k / max(pairs, 1)
-        base = bezier(p0, p1, p2, t)
-        tan = bezier_tangent(p0, p1, p2, t)
-        side = tan.cross(Vector((0, 0, 1))).normalized()
-        normal = side.cross(tan).normalized()
-        size = leaflet_size * (1.0 - 0.35 * k / max(pairs, 1))
-        for sgn in (-1, 1):
-            d = (tan * 0.55 + side * sgn).normalized()
-            add_leaflet(bm, uv_layer, base, d, normal, size, variant, lod["outline"])
-    tan = bezier_tangent(p0, p1, p2, 1.0)
-    side = tan.cross(Vector((0, 0, 1))).normalized()
-    add_leaflet(bm, uv_layer, p2, tan, side.cross(tan), leaflet_size * 0.7, variant, lod["outline"])
+    add_tube(bm, [bezier(p0, p1, p2, CARD_START * 1.3 * i / (n - 1)) for i in range(n)],
+             length * 0.018, length * 0.011, lod["stalk_sides"], MAT_INDEX["stalk"])
+    add_frond_card(bm, uv_layer, p0, p1, p2, width, lod["card_segs"], variant)
 
 
 def add_root(bm, radius, length, above, sides=12, rings_n=9, rng=None):
@@ -303,12 +339,11 @@ def build_stage(cfg, lod_index=0):
     n = cfg["fronds"]
     for i in range(n):
         az = 2 * math.pi * i / n + rng.uniform(-0.25, 0.25)
-        add_frond(bm, uv_layer, rng, az, rng.uniform(*cfg["length"]), cfg["pairs"], lod=lod)
+        add_frond(bm, uv_layer, rng, az, rng.uniform(*cfg["length"]), lod)
     if cfg["shoulder"] > 0:
         add_root(bm, cfg["shoulder"], 0.13, cfg["shoulder"] * 1.4,
                  sides=lod["root_sides"], rings_n=lod["root_rings"], rng=rng)
     return finish_object(bm, f"{cfg['name']}_LOD{lod_index}")
-
 
 
 # --------------------------------------------------------------------------
@@ -316,7 +351,6 @@ def build_stage(cfg, lod_index=0):
 # --------------------------------------------------------------------------
 stage_lods = {cfg["name"]: [build_stage(cfg, i) for i in range(len(LODS))] for cfg in STAGES}
 models = [lods[0] for lods in stage_lods.values()]   # LOD0s, used for previews
-all_lod_objects = [o for lods in stage_lods.values() for o in lods]
 
 # One FBX per stage holding <Stage>_LOD0.._LOD2. Unity groups them by suffix.
 for name, lods in stage_lods.items():

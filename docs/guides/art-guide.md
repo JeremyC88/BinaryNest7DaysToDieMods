@@ -79,10 +79,10 @@ Check new seed colours against vanilla and our existing seeds:
 
 ### Look
 
-- **Stylised but defined:** smooth-shaded leaves with some shape (lobes, a midrib fold), not flat single triangles.
-- **Leaves are modelled on both sides.** The game's standard shader hides back faces.
+- **Leaves are cut-out cards, like vanilla.** The vanilla potato and blueberry leaves are flat cards with a leaf texture whose transparent areas cut out the leaf's outline. That's what makes them look thin and detailed. Modelling every leaflet as solid geometry looked chunky and blocky next to them. The carrot uses one flat, slightly cupped card per frond with a feathery frond texture (`CarrotFrond.png`, RGBA). Mark the material as `cutout` in the builder's `MaterialDefs`. The shader then alpha-tests it and draws both sides, and the texture import keeps leaf coverage in distant mipmaps.
+- **Solid parts** (stalks, roots, grains) are normal geometry. Model any thin solid parts on both sides, because non-cut-out materials hide back faces.
 - **Muted colours:** the game's lighting makes the Unity Standard shader look brighter and more saturated than Blender. Choose darker, less saturated colours than looks right in Blender. Carrot leaf greens are around sRGB `(0.12–0.19, 0.26–0.32, 0.07–0.10)`.
-- **Variation:** a small generated texture with several colour variants (the carrot uses four greens), picked per frond, plus subtle veins and lighter tips. Avoid one flat colour.
+- **Variation:** generated textures with several colour variants (the carrot frond texture has two greens), picked per frond. Avoid one flat colour.
 - **Colours are sRGB values** (what Unity uses). In Blender, convert them to linear for the material (`srgb_to_linear`) so the previews match the game.
 
 ### Triangle budget and LODs
@@ -95,7 +95,7 @@ Budget for the grown stage's LOD0 against vanilla crops:
 | --- | --- |
 | Potato (vanilla) | 396 (no LODs) |
 | Blueberry (vanilla) | 2,000 |
-| **Carrot (ours)** | **4,714** (LOD1 2,654, LOD2 826) |
+| **Carrot (ours)** | **854** (LOD1 494, LOD2 246), leaf cards |
 | **Wheat (ours)** | **5,664** (LOD1 2,976, LOD2 576) |
 | Cotton (vanilla) | 5,602 |
 | Pumpkin (vanilla) | 12,538 |
@@ -113,6 +113,7 @@ These are already automated in `FarmingBundleBuilder.cs`. A new crop only needs 
 - **Root object** on layer 16, with a `SphereCollider` around the base of the plant.
 - **`LODGroup` on the prefab root.** That's where the game reads it.
 - **Wind sway:** every crop material uses our shader `BinaryNest/CropWind` ([CropWind.shader](../../unity/BinaryNestModAssets/Assets/Farming/Shaders/CropWind.shader)). It's Standard lighting plus a vertex sway driven by the game's global `_Wind` value (wind speed with gusts, and a wind clock, set every frame by the weather), so our crops move with the same weather as vanilla plants. Roots stay still and tips move most. Tune per crop in the builder's `SwayDefs` (sway height, distance, leaf flutter). The build log's `Shader check` line confirms every prefab uses it.
+- **Cut-out leaf cards:** materials marked `cutout` get `_Cutoff` 0.5, `_Cull` Off and the alpha-test queue. Their textures keep alpha with coverage-preserving mipmaps.
 - Textured materials use a white colour so the texture shows.
 - All prefabs go into `Resources/BinaryNestFarming.unity3d`.
 

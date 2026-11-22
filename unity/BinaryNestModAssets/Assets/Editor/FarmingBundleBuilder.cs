@@ -61,23 +61,25 @@ namespace BinaryNest.Editor
             ("Wheat",  "WheatHarvest",   "WheatHarvest"),
         };
 
-        // Per crop: material name in the FBX -> colour, smoothness and optional
-        // texture (relative to Assets/Farming/<crop>/Textures). Colours match
-        // the Blender build scripts (sRGB). Textured materials use white so the
+        // Per crop: material name in the FBX -> colour, smoothness, optional
+        // texture (relative to Assets/Farming/<crop>/Textures) and whether it's
+        // a cut-out leaf card (texture alpha cuts out the leaf, both sides drawn,
+        // like the vanilla potato and blueberry leaves). Colours match the
+        // Blender build scripts (sRGB). Textured materials use white so the
         // texture's own colours show.
-        static readonly Dictionary<string, Dictionary<string, (Color color, float smoothness, string texture)>> MaterialDefs = new()
+        static readonly Dictionary<string, Dictionary<string, (Color color, float smoothness, string texture, bool cutout)>> MaterialDefs = new()
         {
             ["Carrot"] = new()
             {
-                ["CarrotLeaf"]  = (Color.white, 0.20f, "CarrotLeaf.png"),
-                ["CarrotStalk"] = (new Color(0.17f, 0.29f, 0.10f), 0.10f, null),
-                ["CarrotRoot"]  = (new Color(0.80f, 0.32f, 0.05f), 0.30f, null),
+                ["CarrotLeaf"]  = (Color.white, 0.15f, "CarrotFrond.png", true),
+                ["CarrotStalk"] = (new Color(0.17f, 0.29f, 0.10f), 0.10f, null, false),
+                ["CarrotRoot"]  = (new Color(0.80f, 0.32f, 0.05f), 0.30f, null, false),
             },
             ["Wheat"] = new()
             {
-                ["WheatPlant"]      = (Color.white, 0.15f, "WheatPlant.png"),
-                ["WheatGrainGreen"] = (new Color(0.45f, 0.53f, 0.23f), 0.25f, null),
-                ["WheatGrainGold"]  = (new Color(0.80f, 0.62f, 0.30f), 0.30f, null),
+                ["WheatPlant"]      = (Color.white, 0.15f, "WheatPlant.png", false),
+                ["WheatGrainGreen"] = (new Color(0.45f, 0.53f, 0.23f), 0.25f, null, false),
+                ["WheatGrainGold"]  = (new Color(0.80f, 0.62f, 0.30f), 0.30f, null, false),
             },
         };
 
@@ -252,13 +254,13 @@ namespace BinaryNest.Editor
 
             foreach (var (name, def) in MaterialDefs[crop])
             {
-                var mat = GetOrCreateMaterial(crop, name, def.color, def.smoothness, def.texture);
+                var mat = GetOrCreateMaterial(crop, name, def.color, def.smoothness, def.texture, def.cutout);
                 importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), name), mat);
             }
             importer.SaveAndReimport();
         }
 
-        static Texture2D ConfigureTexture(string crop, string file)
+        static Texture2D ConfigureTexture(string crop, string file, bool cutout)
         {
             var path = $"{FarmingRoot}/{crop}/Textures/{file}";
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -272,13 +274,25 @@ namespace BinaryNest.Editor
             importer.mipmapEnabled = true;
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.filterMode = FilterMode.Bilinear;
-            importer.alphaSource = TextureImporterAlphaSource.None;
+            if (cutout)
+            {
+                // Keep the alpha that cuts out the leaf, and keep leaves from
+                // thinning out in the smaller mipmaps used at a distance.
+                importer.alphaSource = TextureImporterAlphaSource.FromInput;
+                importer.alphaIsTransparency = true;
+                importer.mipMapsPreserveCoverage = true;
+                importer.alphaTestReferenceValue = 0.5f;
+            }
+            else
+            {
+                importer.alphaSource = TextureImporterAlphaSource.None;
+            }
             importer.textureCompression = TextureImporterCompression.Compressed;
             importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
-        static Material GetOrCreateMaterial(string crop, string name, Color color, float smoothness, string texture)
+        static Material GetOrCreateMaterial(string crop, string name, Color color, float smoothness, string texture, bool cutout)
         {
             var dir = $"{FarmingRoot}/{crop}/Materials";
             Directory.CreateDirectory(dir);
@@ -297,7 +311,11 @@ namespace BinaryNest.Editor
             }
             mat.shader = shader;
             mat.color = color;
-            mat.mainTexture = texture != null ? ConfigureTexture(crop, texture) : null;
+            mat.mainTexture = texture != null ? ConfigureTexture(crop, texture, cutout) : null;
+            // Cut-out leaf cards: alpha test, both sides drawn. Solid parts: opaque queue.
+            mat.SetFloat("_Cutoff", cutout ? 0.5f : 0f);
+            mat.SetFloat("_Cull", cutout ? (float)UnityEngine.Rendering.CullMode.Off : (float)UnityEngine.Rendering.CullMode.Back);
+            mat.renderQueue = cutout ? (int)UnityEngine.Rendering.RenderQueue.AlphaTest : (int)UnityEngine.Rendering.RenderQueue.Geometry;
             mat.SetFloat("_Glossiness", smoothness);
             mat.SetFloat("_Metallic", 0f);
             if (SwayDefs.TryGetValue(crop, out var sway))

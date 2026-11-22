@@ -342,8 +342,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.27874878
-  m_Center: {x: 0, y: -0.3020011, z: 0}
+  m_Radius: 0.23031776
+  m_Center: {x: 0, y: -0.3121459, z: 0}
 --- !u!205 &6831586118078062099
 LODGroup:
   m_ObjectHideFlags: 0
@@ -352,8 +352,8 @@ LODGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4971613855058089830}
   serializedVersion: 2
-  m_LocalReferencePoint: {x: -0.026385605, y: -0.3872011, z: -0.029726952}
-  m_Size: 0.92916256
+  m_LocalReferencePoint: {x: -0.009437084, y: -0.3973459, z: -0.021555543}
+  m_Size: 0.7677258
   m_FadeMode: 1
   m_AnimateCrossFading: 1
   m_LastLODIsBillboard: 0
