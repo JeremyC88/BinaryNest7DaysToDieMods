@@ -81,6 +81,20 @@ namespace BinaryNest.Editor
             },
         };
 
+        // All crop materials use our wind shader (Assets/Farming/Shaders/CropWind.shader),
+        // which sways with the game's global _Wind like the vanilla plants.
+        const string CropShader = "BinaryNest/CropWind";
+
+        // Per crop wind tuning:
+        //   height   - height (m) at which a plant sways fully (roots don't move)
+        //   strength - how far (m) the tips move in normal wind
+        //   flutter  - small fast leaf/ear movement (m)
+        static readonly Dictionary<string, (float height, float strength, float flutter)> SwayDefs = new()
+        {
+            ["Carrot"] = (0.40f, 0.045f, 0.004f),   // low, leafy tops: gentle
+            ["Wheat"]  = (0.95f, 0.085f, 0.003f),   // tall, flexible stalks: more movement
+        };
+
         [MenuItem("BinaryNest/Build Farming Bundle")]
         public static void Build()
         {
@@ -157,6 +171,12 @@ namespace BinaryNest.Editor
                 {
                     var match = go.tag == vanillaTag;
                     ok &= match;
+                    var shaders = go.GetComponentsInChildren<Renderer>(true)
+                        .SelectMany(r => r.sharedMaterials)
+                        .Where(m => m != null && m.shader != null)
+                        .Select(m => $"{m.shader.name}{(m.shader.isSupported ? "" : " (NOT SUPPORTED)")}")
+                        .Distinct();
+                    Debug.Log($"[BinaryNest] Shader check: {go.name} uses {string.Join(", ", shaders)}");
                     var lods = go.GetComponent<LODGroup>();
                     Debug.Log($"[BinaryNest] Tag check: {go.name} = '{go.tag}', vanilla potato = '{vanillaTag}' -> {(match ? "match" : "MISMATCH")}; root LODGroup: {(lods ? lods.lodCount + " LODs" : "none")}");
                 }
@@ -264,16 +284,28 @@ namespace BinaryNest.Editor
             Directory.CreateDirectory(dir);
             var path = $"{dir}/{name}.mat";
             var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            var shader = Shader.Find(CropShader);
+            if (shader == null)
+            {
+                Debug.LogError($"[BinaryNest] Shader '{CropShader}' not found; falling back to Standard (no wind sway).");
+                shader = Shader.Find("Standard");
+            }
             if (mat == null)
             {
-                mat = new Material(Shader.Find("Standard"));
+                mat = new Material(shader);
                 AssetDatabase.CreateAsset(mat, path);
             }
-            mat.shader = Shader.Find("Standard");
+            mat.shader = shader;
             mat.color = color;
             mat.mainTexture = texture != null ? ConfigureTexture(crop, texture) : null;
             mat.SetFloat("_Glossiness", smoothness);
             mat.SetFloat("_Metallic", 0f);
+            if (SwayDefs.TryGetValue(crop, out var sway))
+            {
+                mat.SetFloat("_SwayHeight", sway.height);
+                mat.SetFloat("_SwayStrength", sway.strength);
+                mat.SetFloat("_Flutter", sway.flutter);
+            }
             mat.enableInstancing = true;
             EditorUtility.SetDirty(mat);
             return mat;

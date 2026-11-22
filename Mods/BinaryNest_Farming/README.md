@@ -34,6 +34,8 @@ Icons and models follow the [art guide](../../docs/guides/art-guide.md).
 1. **Models and textures:** from the repo root, run `blender --background --factory-startup --python art/farming/<crop>/build_<crop>.py` for each crop (`carrot`, `wheat`). Each script writes its FBX models and texture into the Unity project, and preview renders to `art/farming/<crop>/previews/`. Icons are made separately with ChatGPT (see the art guide).
 2. **Asset bundle:** run Unity 2022.3.62f2 on `unity/BinaryNestModAssets` with `-batchmode -quit -executeMethod BinaryNest.Editor.FarmingBundleBuilder.Build`, or use the **BinaryNest > Build Farming Bundle** menu in the editor. This writes `Resources/BinaryNestFarming.unity3d` into this mod and checks the prefabs' `T_Block` tag against the game's own plants.
 
+The crop models use a custom wind shader (`BinaryNest/CropWind`) so they sway with the game's weather like vanilla plants.
+
 Because the mod ships an asset bundle, multiplayer clients need the mod installed too, not just the server.
 
 ## Testing

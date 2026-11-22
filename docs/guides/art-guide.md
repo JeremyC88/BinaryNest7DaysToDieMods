@@ -107,12 +107,13 @@ Stay at or under cotton for a low, leafy crop. Wheat is tall and dense, so expec
 
 ## 3. Unity and in-game rules (handled by the builder)
 
-These are already automated in `FarmingBundleBuilder.cs`. A new crop only needs adding to its `Models` list and a new `MaterialDefs["<Crop>"]` entry.
+These are already automated in `FarmingBundleBuilder.cs`. A new crop only needs adding to its `Models` list, a new `MaterialDefs["<Crop>"]` entry and a `SwayDefs["<Crop>"]` entry.
 
 - **Prefab root tag `T_Block`**, at custom tag **position 4** in the project's tag list. Without it the plant can't be aimed at or harvested. The builder checks this against the game's own plants on every build.
 - **Root object** on layer 16, with a `SphereCollider` around the base of the plant.
 - **`LODGroup` on the prefab root.** That's where the game reads it.
-- Standard shader. Textured materials use a white colour so the texture shows.
+- **Wind sway:** every crop material uses our shader `BinaryNest/CropWind` ([CropWind.shader](../../unity/BinaryNestModAssets/Assets/Farming/Shaders/CropWind.shader)). It's Standard lighting plus a vertex sway driven by the game's global `_Wind` value (wind speed with gusts, and a wind clock, set every frame by the weather), so our crops move with the same weather as vanilla plants. Roots stay still and tips move most. Tune per crop in the builder's `SwayDefs` (sway height, distance, leaf flutter). The build log's `Shader check` line confirms every prefab uses it.
+- Textured materials use a white colour so the texture shows.
 - All prefabs go into `Resources/BinaryNestFarming.unity3d`.
 
 ## 4. XML and naming rules
