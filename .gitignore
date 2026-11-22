@@ -1,0 +1,8 @@
+# Blender backup files
+*.blend1
+*.blend2
+
+# OS clutter
+Thumbs.db
+Desktop.ini
+.DS_Store

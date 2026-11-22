@@ -21,8 +21,15 @@ Growth: `planted<Crop>1` → `planted<Crop>2` → `planted<Crop>3HarvestPlayer`.
 | What | Currently | Replace with |
 | --- | --- | --- |
 | Item icons (4) | Tinted vanilla icons via `CustomIcon` / `CustomIconTint` | 160×160 PNGs in `UIAtlases/ItemIconAtlas/`, named after the item (e.g. `foodCropCarrot.png`), then delete the placeholder lines |
-| Carrot models (3 stages) | Vanilla potato plant models | New renders in a Unity asset bundle in `Resources/` |
-| Wheat models (3 stages) | Vanilla hops plant models | New renders in a Unity asset bundle in `Resources/` |
+| ~~Carrot models (3 stages)~~ | ✅ Done: custom models in `Resources/BinaryNestFarming.unity3d` | |
+| Wheat models (3 stages) | Vanilla hops plant models | New models in the same asset bundle |
+
+## Rebuilding the models
+
+1. **Models:** `blender --background --factory-startup --python art/farming/carrot/build_carrot.py` (from the repo root). This writes the FBX files into the Unity project and renders previews to `art/farming/carrot/previews/`.
+2. **Asset bundle:** run Unity 2022.3.62f2 on `unity/BinaryNestModAssets` with `-batchmode -quit -executeMethod BinaryNest.Editor.FarmingBundleBuilder.Build`, or use the **BinaryNest > Build Farming Bundle** menu in the editor. This writes `Resources/BinaryNestFarming.unity3d` into this mod.
+
+Because the mod now ships an asset bundle, multiplayer clients need the mod installed too, not just the server.
 
 Every placeholder line in the XML is marked with a `PLACEHOLDER` comment.
 
