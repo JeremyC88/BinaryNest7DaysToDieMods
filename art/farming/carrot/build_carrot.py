@@ -39,8 +39,9 @@ for d in (EXPORT_DIR, TEXTURE_DIR, PREVIEW_DIR):
     os.makedirs(d, exist_ok=True)
 
 STAGES = [
-    dict(name="CarrotSeedling", fronds=3,  length=(0.09, 0.13), shoulder=0.0,   seed=11),
-    dict(name="CarrotGrowth",   fronds=5,  length=(0.20, 0.28), shoulder=0.016, seed=22),
+    dict(name="CarrotSeedling", fronds=3,  length=(0.14, 0.19), shoulder=0.0,   seed=11),
+    # shoulder_above: how far the carrot top shows above the soil (growing: just a flush disc)
+    dict(name="CarrotGrowth",   fronds=5,  length=(0.20, 0.28), shoulder=0.016, seed=22, shoulder_above=0.002),
     dict(name="CarrotHarvest",  fronds=7, length=(0.34, 0.46), shoulder=0.032, seed=33),
     # Wild carrot (Queen Anne's lace): bigger, leafier, with white flower heads
     # on tall stalks so it's easy to spot in the landscape. Used by the wild
@@ -439,7 +440,7 @@ def add_root(bm, radius, length, above, sides=12, rings_n=9, rng=None, uv_layer=
             set_uv(f, ((u0, v0), (u1, v0), (u1, v1), (u0, v1)))
     cap = bm.faces.new(rings[0])
     cap.material_index = MAT_INDEX["root"]
-    set_uv(cap, [(0.5, 0.01)] * sides)
+    set_uv(cap, [(0.5, 0.12)] * sides)     # orange, so a flush top reads as carrot
     tip = bm.verts.new((0, 0, top - length * 1.02))
     for s in range(sides):
         f = bm.faces.new((rings[-1][(s + 1) % sides], rings[-1][s], tip))
@@ -472,7 +473,7 @@ def build_stage(cfg, lod_index=0):
     for _ in range(cfg.get("umbels", 0)):
         add_umbel(bm, uv_layer, rng, rng.uniform(*cfg["umbel_height"]), cfg["umbel_radius"], lod)
     if cfg["shoulder"] > 0:
-        add_root(bm, cfg["shoulder"], 0.13, cfg["shoulder"] * 1.4,
+        add_root(bm, cfg["shoulder"], 0.13, cfg.get("shoulder_above", cfg["shoulder"] * 1.4),
                  sides=lod["root_sides"], rings_n=lod["root_rings"], rng=rng, uv_layer=uv_layer)
     return finish_object(bm, f"{cfg['name']}_LOD{lod_index}")
 
