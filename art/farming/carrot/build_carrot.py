@@ -39,19 +39,19 @@ for d in (EXPORT_DIR, TEXTURE_DIR, PREVIEW_DIR):
 
 STAGES = [
     dict(name="CarrotSeedling", fronds=3,  length=(0.09, 0.13), shoulder=0.0,   seed=11),
-    dict(name="CarrotGrowth",   fronds=6,  length=(0.20, 0.28), shoulder=0.016, seed=22),
-    dict(name="CarrotHarvest",  fronds=10, length=(0.34, 0.46), shoulder=0.032, seed=33),
+    dict(name="CarrotGrowth",   fronds=5,  length=(0.20, 0.28), shoulder=0.016, seed=22),
+    dict(name="CarrotHarvest",  fronds=7, length=(0.34, 0.46), shoulder=0.032, seed=33),
 ]
 
 # Two muted greens, one per texture tile; each frond picks one (sRGB).
 FROND_VARIANTS = [
-    (0.15, 0.30, 0.08),
-    (0.19, 0.34, 0.10),
+    (0.13, 0.26, 0.07),
+    (0.17, 0.29, 0.09),
 ]
 STALK_RGB = (0.17, 0.29, 0.10)
 ROOT_RGB = (0.80, 0.32, 0.05)
 FROND_TILE = (256, 512)    # one frond per tile: u across the frond, v from base to tip
-FROND_WIDTH = 0.55         # card width as a fraction of the frond's length
+FROND_WIDTH = 0.42         # card width as a fraction of the frond's length
 CARD_START = 0.22          # the leafy card starts this far along the stalk
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -110,16 +110,16 @@ def make_frond_texture():
             return v * th * ss
 
         stem = shade(base_rgb, 1.35)
-        levels = 13                                   # pairs of side branches (pinnae)
+        levels = 11                                   # pairs of side branches (pinnae)
         for k in range(levels):
-            v0 = 0.05 + 0.9 * k / levels
+            v0 = 0.05 + 0.9 * k / levels + rng.uniform(-0.012, 0.012)
             for side in (-1, 1):
-                v0s = v0 + (0.02 if side > 0 else 0.0)   # slightly alternate sides
+                v0s = v0 + (0.025 if side > 0 else 0.0) + rng.uniform(-0.01, 0.01)
                 hw = half_width(min(v0s + 0.06, 1.0))
                 if hw < 0.03:
                     continue
-                u1 = 0.5 + side * hw * 0.95
-                v1 = min(v0s + hw * 0.55 + 0.02, 0.995)
+                u1 = 0.5 + side * hw * rng.uniform(0.75, 0.98)
+                v1 = min(v0s + hw * rng.uniform(0.4, 0.7) + 0.02, 0.995)
                 x0, y0, x1, y1 = px_u(0.5), px_v(v0s), px_u(u1), px_v(v1)
                 dirx, diry = x1 - x0, y1 - y0
                 blen = math.hypot(dirx, diry)
@@ -130,7 +130,9 @@ def make_frond_texture():
                     cx, cy = x0 + dirx * f, y0 + diry * f
                     plen = blen * (0.22 - 0.10 * f) * rng.uniform(0.85, 1.15)
                     for up in (1, -1):
-                        a = bang + up * math.radians(rng.uniform(38, 55))
+                        if rng.random() < 0.18:               # a few leaflets missing
+                            continue
+                        a = bang + up * math.radians(rng.uniform(28, 62))
                         col = shade(base_rgb, rng.uniform(0.85, 1.12) * (0.9 + 0.2 * v0s))
                         # 2-3 narrow lobes per leaflet: the feathery carrot look
                         for lobe in range(rng.choice((2, 3))):
@@ -248,7 +250,7 @@ LODS = [
 ]
 
 
-def add_frond_card(bm, uv_layer, p0, p1, p2, width, segs, variant):
+def add_frond_card(bm, uv_layer, p0, p1, p2, width, segs, variant, roll=0.0, mirror=False):
     """One flat, slightly cupped card following the frond's curve, drawn from
     both sides by the shader (Cull Off). The texture's alpha cuts out the leaf."""
     left, mid, right = [], [], []
@@ -259,6 +261,9 @@ def add_frond_card(bm, uv_layer, p0, p1, p2, width, segs, variant):
         side = tan.cross(Vector((0, 0, 1)))
         side = side.normalized() if side.length > 1e-6 else Vector((1, 0, 0))
         normal = side.cross(tan).normalized()
+        # roll the card around the stalk so fronds don't all face up
+        side, normal = (side * math.cos(roll) + normal * math.sin(roll),
+                        normal * math.cos(roll) - side * math.sin(roll))
         cup = normal * width * 0.10          # edges sit a little below the midrib
         left.append(bm.verts.new(c - side * width * 0.5 - cup))
         mid.append(bm.verts.new(c))
@@ -271,15 +276,18 @@ def add_frond_card(bm, uv_layer, p0, p1, p2, width, segs, variant):
             f.material_index = MAT_INDEX["leaf"]
             f.smooth = True
             for loop, u, row in zip(f.loops, us, (i, i, i + 1, i + 1)):
-                loop[uv_layer].uv = Vector(((variant + u) / tiles, row / segs))
+                uu = 1.0 - u if mirror else u               # mirrored fronds break repetition
+                loop[uv_layer].uv = Vector(((variant + uu) / tiles, row / segs))
 
 
 def add_frond(bm, uv_layer, rng, azimuth, length, lod):
     out = Vector((math.cos(azimuth), math.sin(azimuth), 0))
-    elev = math.radians(rng.uniform(55, 75))
+    elev = math.radians(rng.uniform(50, 80))
     droop = rng.uniform(0.15, 0.35)
     variant = rng.randrange(len(FROND_VARIANTS))
-    width = length * FROND_WIDTH * rng.uniform(0.9, 1.1)
+    width = length * FROND_WIDTH * rng.uniform(0.8, 1.1)
+    roll = math.radians(rng.uniform(-40, 40))
+    mirror = rng.random() < 0.5
     p0 = out * 0.004
     p1 = p0 + (out * math.cos(elev) + Vector((0, 0, math.sin(elev)))) * length * 0.6
     p2 = p0 + out * length * (0.55 + droop) + Vector((0, 0, length * (0.85 - droop)))
@@ -287,8 +295,8 @@ def add_frond(bm, uv_layer, rng, azimuth, length, lod):
     # thin stalk (petiole) up to just past where the leafy card begins
     n = lod["stalk_points"]
     add_tube(bm, [bezier(p0, p1, p2, CARD_START * 1.3 * i / (n - 1)) for i in range(n)],
-             length * 0.018, length * 0.011, lod["stalk_sides"], MAT_INDEX["stalk"])
-    add_frond_card(bm, uv_layer, p0, p1, p2, width, lod["card_segs"], variant)
+             length * 0.011, length * 0.007, lod["stalk_sides"], MAT_INDEX["stalk"])
+    add_frond_card(bm, uv_layer, p0, p1, p2, width, lod["card_segs"], variant, roll, mirror)
 
 
 def add_root(bm, radius, length, above, sides=12, rings_n=9, rng=None):
@@ -338,7 +346,7 @@ def build_stage(cfg, lod_index=0):
     uv_layer = bm.loops.layers.uv.new("UVMap")
     n = cfg["fronds"]
     for i in range(n):
-        az = 2 * math.pi * i / n + rng.uniform(-0.25, 0.25)
+        az = 2 * math.pi * i / n + rng.uniform(-0.55, 0.55)   # irregular spacing
         add_frond(bm, uv_layer, rng, az, rng.uniform(*cfg["length"]), lod)
     if cfg["shoulder"] > 0:
         add_root(bm, cfg["shoulder"], 0.13, cfg["shoulder"] * 1.4,

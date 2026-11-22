@@ -84,6 +84,7 @@ Check new seed colours against vanilla and our existing seeds:
 - **Solid parts** (carrot stalks and roots) are normal geometry. Model any thin solid parts on both sides, because non-cut-out materials hide back faces.
 - **Muted colours:** the game's lighting makes the Unity Standard shader look brighter and more saturated than Blender. Choose darker, less saturated colours than looks right in Blender. Carrot leaf greens are around sRGB `(0.12–0.19, 0.26–0.32, 0.07–0.10)`.
 - **Variation:** generated textures with several colour variants (the carrot frond texture has two greens), picked per frond. Avoid one flat colour.
+- **Don't overcrowd or regularise:** too many leaves fanned evenly around the centre, all facing up, looks computer-made. Use fewer, narrower leaves, irregular spacing, a random roll per leaf, and mirror some textures. Leave small gaps in the texture (a few missing leaflets) and vary angles.
 - **Colours are sRGB values** (what Unity uses). In Blender, convert them to linear for the material (`srgb_to_linear`) so the previews match the game.
 
 ### Triangle budget and LODs
@@ -96,7 +97,7 @@ Budget for the grown stage's LOD0 against vanilla crops:
 | --- | --- |
 | Potato (vanilla) | 396 (no LODs) |
 | Blueberry (vanilla) | 2,000 |
-| **Carrot (ours)** | **854** (LOD1 494, LOD2 246), leaf cards |
+| **Carrot (ours)** | **662** (LOD1 374, LOD2 186), leaf cards |
 | **Wheat (ours)** | **1,056** (LOD1 704, LOD2 264), all cards |
 | Cotton (vanilla) | 5,602 |
 | Pumpkin (vanilla) | 12,538 |
