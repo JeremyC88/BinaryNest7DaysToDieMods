@@ -1,11 +1,19 @@
 <configs>
 	<append xpath="/items">
 
-		<!-- Carrot: edible, same food values as the vanilla potato. -->
+		<!-- Carrot: edible, same food values as the vanilla potato (2 Food). -->
 		<item name="foodCropCarrot">
 			<property name="Extends" value="foodCropPotato"/>
 			<property name="DescriptionKey" value="foodCropCarrotDesc"/>
 			<!-- Icon: UIAtlases/ItemIconAtlas/foodCropCarrot.png -->
+
+			<!-- Extends copies properties but NOT effect groups, so the food value
+			     has to be repeated here. Copied from the vanilla foodCropPotato. -->
+			<effect_group tiered="false" name="Food Tier 0">
+				<triggered_effect trigger="onSelfPrimaryActionEnd" action="ModifyCVar" cvar="$foodAmountAdd" operation="add" value="2"/>
+				<triggered_effect trigger="onSelfPrimaryActionEnd" action="AddBuff" buff="buffProcessConsumables"/>
+				<display_value name="dSmellUse" value="0"/>
+			</effect_group>
 		</item>
 
 		<!-- Wheat: crafting resource only, not edible raw. Based on the vanilla cotton resource. -->

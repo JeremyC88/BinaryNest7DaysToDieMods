@@ -124,6 +124,7 @@ These are already automated in `FarmingBundleBuilder.cs`. A new crop only needs 
 | Grown plant label (`...3HarvestDesc`) | Just the crop, like vanilla "Chrysanthemum" | Carrot |
 | Localization file | Must be `Config/Localization.csv`. The game ignores `.txt`. | |
 | Wild block (`...3Harvest`) | Set `CreativeMode` to `None`. It's never inherited, and the default shows it in the creative menu. | `plantedCarrot3Harvest` |
+| Items that `Extends` a vanilla item | `Extends` copies properties but **not** `effect_group`s. Repeat food, water, health and buff effects in our own item, or they'll be 0. | `foodCropCarrot` repeats the potato's `$foodAmountAdd` 2 |
 
 ---
 
