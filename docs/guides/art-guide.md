@@ -2,7 +2,7 @@
 
 Rules for the inventory icons and 3D models we make, so new crops (wheat next) match the carrot. These come from what worked in game and from feedback on the carrot.
 
-Reference implementations: [build_carrot.py](../../art/farming/carrot/build_carrot.py) and [build_wheat.py](../../art/farming/wheat/build_wheat.py) (Blender), and [FarmingBundleBuilder.cs](../../unity/BinaryNestModAssets/Assets/Editor/FarmingBundleBuilder.cs) (Unity).
+Reference implementations for models: [build_carrot.py](../../art/farming/carrot/build_carrot.py) and [build_wheat.py](../../art/farming/wheat/build_wheat.py) (Blender), and [FarmingBundleBuilder.cs](../../unity/BinaryNestModAssets/Assets/Editor/FarmingBundleBuilder.cs) (Unity). Icons are made with ChatGPT (section 1).
 
 ---
 
@@ -20,20 +20,34 @@ Icons are shown small: inventory slots, the creative menu, crafting skill rows a
 | XML | No `CustomIcon` on the item itself. Remove any placeholder `CustomIcon` / `CustomIconTint` lines once the PNG exists. If the item `Extends` a vanilla item that sets `CustomIcon` (e.g. wheat extends cotton), add `param1="CustomIcon"` to the `Extends` property so the icon isn't inherited. |
 | Growing and grown blocks | Point at the seed icon with `CustomIcon` (e.g. `plantedCarrot1`), the same way vanilla does |
 
+### Made with ChatGPT
+
+**Inventory and menu icons are made with ChatGPT image generation, not rendered in Blender.** We tried rendered icons (including photo-realistic Cycles renders), and they never looked as natural as the vanilla icons, especially seed heaps. ChatGPT's images matched the game's realistic icon style far better.
+
+Workflow:
+
+1. **Generate** a square, photo-realistic image of the item in ChatGPT, using the composition rules below. Ask for a **transparent background** (or a plain white one to cut out).
+2. **Make it a game icon:** crop so the subject fills the square, remove any background, and resize to **160 × 160** RGBA PNG.
+3. **Name and place it** exactly as the Format table says, then remove any placeholder `CustomIcon` lines from the XML.
+4. **Check it at slot size** (about 56 px) next to the vanilla icons in game, or with a scaled-down copy. If you can't tell what it is at that size, regenerate with a simpler composition.
+5. **Licence:** OpenAI's terms currently give you the rights to images you generate, but check the current terms before a release. Don't use stock photos or images from other sites.
+
+Example prompt (Wheat Seeds):
+
+> Photo-realistic game inventory icon, square: a small heap of reddish-brown wheat grains with a golden ear of wheat lying in front, soft even studio lighting, sharp detail, transparent background, no text, no shadow on the background.
+
 ### Composition
 
-1. **One clear subject that fills the square.** Frame to the model's actual vertices, not its bounding box, with about 6% margin (`ortho_scale = extent × 1.06`). A rotated bounding box is far bigger than the object and leaves the subject tiny.
-2. **Produce: a single item on a diagonal,** like the vanilla corn icon: tip or base at the bottom left, top at the upper right. Show **one** item, not a group, and make it big. Keep leafy tops short so the produce itself dominates.
-3. **Seeds: seeds plus the crop,** like the vanilla seed icons. Two styles, depending on the seed:
-   - **Big seeds (wheat, and anything grain or bean sized): the corn-seed style.** About 20–25 large, individually readable seeds in a loose cluster, a few stacked in the middle, like the vanilla `plantedCorn1` icon. The crop lies **diagonally behind** the cluster (stalk lower left, top upper right), clearly visible and not hidden in a corner.
-   - **Tiny seeds (carrot): a heap.** A heap of many small seeds fills most of the frame, with one small piece of the crop lying **side-on in front** (carrot: green top on the left, **point on the right**).
-   - In both styles:
-     - Seeds use a **colour and shape specific to the crop**, so they don't look like other seeds.
-     - **The seeds and the crop must contrast in colour.** Wheat grains are reddish brown and the ear is straw gold. Same-coloured seeds and crop blur into one blob at slot size.
-     - Don't point the crop at the camera, or it turns into a blob. Show it side-on.
-     - Keep leaves and stalks short so they don't stretch the frame and shrink the seeds.
-     - Very pale colours wash out to white under the icon lights. Use mid tones.
-4. **Camera:** orthographic. Produce is viewed from nearly straight on (slightly above). Seed heaps are viewed from about 30–35° above, so the heap has volume.
+These apply to whatever prompt you write.
+
+1. **One clear subject that fills the square,** with only a small margin.
+2. **Produce: a single item on a diagonal,** like the vanilla corn icon: one end at the bottom left, the top at the upper right. Show **one** item, not a group, and make it big. Keep leafy tops short so the produce itself dominates.
+3. **Seeds: a heap of seeds plus the crop,** like the vanilla seed icons:
+   - The seeds are the main shape and fill most of the frame.
+   - Seeds use a **colour and shape specific to the crop**, so they don't look like other seeds.
+   - **The seeds and the crop must contrast in colour,** or they blur into one blob at slot size (e.g. reddish-brown wheat grains with a golden ear).
+   - Show the crop side-on, not pointing at the viewer, and clearly visible, not tucked in a corner.
+4. **Realistic, evenly lit, no background, no text, no drop shadow,** to match the vanilla icons on the game's dark grey UI.
 
 ### Telling seeds apart
 
@@ -45,19 +59,9 @@ Check new seed colours against vanilla and our existing seeds:
 | Goldenrod (vanilla) | Black, tiny |
 | Cotton (vanilla) | White fluff with dark seeds |
 | Coffee (vanilla) | Dark brown beans |
-| **Carrot (ours)** | **Pale tan, round** |
 | Corn (vanilla) | Bright yellow kernels, large |
-| **Wheat (ours)** | **Reddish-brown oval grains, large (corn-seed style), with a straw-gold ear behind** |
-
-### Lighting and colour
-
-- Two sun lights: **key** (energy 4.5) from the top left, **fill** (energy 1.8) from the right, with soft angle (10°). World strength 1.2.
-- View transform **Standard** (not AgX) for icons, so colours stay punchy at small size.
-- Icons should look brighter and cleaner than the in-world previews. They sit on dark grey UI backgrounds.
-
-### Checking
-
-The build script also renders a **56 × 56** copy to `previews/icon_<name>_small.png`. Look at that before committing. If you can't tell what it is at that size, change the design rather than the lighting.
+| **Carrot (ours)** | Small seeds with a carrot |
+| **Wheat (ours)** | **Reddish-brown grains with a golden ear** |
 
 ---
 
@@ -125,9 +129,10 @@ These are already automated in `FarmingBundleBuilder.cs`. A new crop only needs 
 
 ## 5. Pipeline per crop
 
-1. Copy `art/farming/carrot/build_carrot.py` to `art/farming/<crop>/build_<crop>.py` and change the geometry, colours and icon composition.
-2. Run it: `blender --background --factory-startup --python art/farming/<crop>/build_<crop>.py`. It writes the FBX files and texture into the Unity project, the icons into the mod, and previews to `art/farming/<crop>/previews/`.
-3. Review the previews, including the `_small` icons.
-4. Add the crop's models and materials to `FarmingBundleBuilder.cs`, then run the bundle build. Check the log for `Tag check passed` and `3 LODs`.
-5. Point `blocks.xml` at `#@modfolder:Resources/BinaryNestFarming.unity3d?<Stage>` and remove placeholder lines.
-6. Test in game: aim, harvest, names, icons, LOD fade at distance.
+1. Copy `art/farming/carrot/build_carrot.py` to `art/farming/<crop>/build_<crop>.py` and change the geometry and colours.
+2. Run it: `blender --background --factory-startup --python art/farming/<crop>/build_<crop>.py`. It writes the FBX files and texture into the Unity project, and previews to `art/farming/<crop>/previews/`.
+3. Review the previews.
+4. Make the icons with ChatGPT (section 1) and add them to `UIAtlases/ItemIconAtlas/`.
+5. Add the crop's models and materials to `FarmingBundleBuilder.cs`, then run the bundle build. Check the log for `Tag check passed` and `3 LODs`.
+6. Point `blocks.xml` at `#@modfolder:Resources/BinaryNestFarming.unity3d?<Stage>` and remove placeholder lines.
+7. Test in game: aim, harvest, names, icons, LOD fade at distance.

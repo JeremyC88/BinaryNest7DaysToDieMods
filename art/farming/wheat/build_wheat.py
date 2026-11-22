@@ -1,5 +1,6 @@
 """
-Builds the wheat models and icons for Adapting Farming.
+Builds the wheat models for Adapting Farming.
+(Inventory icons are made separately with ChatGPT; see docs/guides/art-guide.md.)
 Follows docs/guides/art-guide.md (same pipeline as the carrot).
 
 Run headless from the repo root:
@@ -7,12 +8,10 @@ Run headless from the repo root:
 
 Outputs:
     art/farming/wheat/wheat.blend             source scene
-    art/farming/wheat/previews/*.png          preview renders (incl. icon copies)
+    art/farming/wheat/previews/*.png          preview renders
     unity/BinaryNestModAssets/Assets/Farming/Wheat/
         Models/Wheat<Stage>.fbx               one FBX per stage, LOD0..LOD2 inside
         Textures/WheatPlant.png               stalk/leaf texture (2 green + 2 gold)
-    Mods/BinaryNest_Farming/UIAtlases/ItemIconAtlas/
-        resourceCropWheat.png, plantedWheat1.png   160x160 inventory icons
 
 Scale: 1 Blender unit = 1 metre = 1 game block. Each model's origin is where
 the plant meets the soil.
@@ -31,9 +30,8 @@ REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 UNITY_WHEAT = os.path.join(REPO, "unity", "BinaryNestModAssets", "Assets", "Farming", "Wheat")
 EXPORT_DIR = os.path.join(UNITY_WHEAT, "Models")
 TEXTURE_DIR = os.path.join(UNITY_WHEAT, "Textures")
-ICON_DIR = os.path.join(REPO, "Mods", "BinaryNest_Farming", "UIAtlases", "ItemIconAtlas")
 PREVIEW_DIR = os.path.join(HERE, "previews")
-for d in (EXPORT_DIR, TEXTURE_DIR, ICON_DIR, PREVIEW_DIR):
+for d in (EXPORT_DIR, TEXTURE_DIR, PREVIEW_DIR):
     os.makedirs(d, exist_ok=True)
 
 # --------------------------------------------------------------------------
@@ -129,7 +127,6 @@ PLANT_IMAGE = make_plant_texture()
 MAT_PLANT = make_material("WheatPlant", (1, 1, 1), 0.75, PLANT_IMAGE)
 MAT_GRAIN_GREEN = make_material("WheatGrainGreen", GRAIN_GREEN, 0.6)
 MAT_GRAIN_GOLD = make_material("WheatGrainGold", GRAIN_GOLD, 0.55)
-MAT_TWINE = make_material("WheatTwine", (0.35, 0.24, 0.14), 0.9)
 MAT_SOIL = make_material("PreviewSoil", (0.16, 0.10, 0.06), 0.95)
 MAT_INDEX = {"plant": 0, "grain_green": 1, "grain_gold": 2}
 GRAIN_MAT = {"green": MAT_INDEX["grain_green"], "gold": MAT_INDEX["grain_gold"]}
@@ -451,132 +448,6 @@ cam_data.lens = 50
 aim((0.0, 30.0 - 3.6, 0.9), (0.0, 30.0, 0.45))
 render(os.path.join(PREVIEW_DIR, "wheat_harvest_lods.png"), 1500, 700)
 
-# --------------------------------------------------------------------------
-# Icons (see art guide: one clear subject, filling the square, bright)
-# --------------------------------------------------------------------------
-ICON_LOD = LODS[0]
-# Icons are small: big, dense ears with long bristles so they read as wheat.
-ICON_HEAD = dict(head_len=0.10, kernel_scale=1.7, awn_len=0.055)
-
-
-def build_ear(bm, uv_layer, base, length, tile, lean=Vector((0, 0, 0)), radius=0.0055, head=ICON_HEAD):
-    """One cut stalk of ripe wheat with its ear, standing up +Z from base."""
-    top = base + Vector((0, 0, length)) + lean
-    mid = base + Vector((0, 0, length * 0.6)) + lean * 0.3
-    pts = [bezier(base, mid, top, i / 7) for i in range(8)]
-    add_tube(bm, uv_layer, pts, radius, radius * 0.7, 6, tile)
-    add_head(bm, top, (top - mid).normalized(), head, ICON_LOD, MAT_INDEX["grain_gold"])
-
-
-# resourceCropWheat: a small tied bundle of ripe stalks on a diagonal
-# (cut ends bottom left, ears top right), like the vanilla corn icon.
-bm = bmesh.new()
-uv_layer = bm.loops.layers.uv.new("UVMap")
-rng = random.Random(61)
-for i in range(7):
-    ang = 2 * math.pi * i / 7
-    off = Vector((math.cos(ang), math.sin(ang), 0)) * 0.008
-    fan = Vector((math.cos(ang), math.sin(ang), 0)) * rng.uniform(0.012, 0.022)
-    build_ear(bm, uv_layer, off + Vector((0, 0, rng.uniform(-0.008, 0.008))), 0.19 + rng.uniform(-0.01, 0.01),
-              2 + (i % 2), lean=fan)
-bundle = finish_object(bm, "IconWheatBundle")
-bpy.ops.mesh.primitive_cylinder_add(radius=0.0165, depth=0.022, location=(0, 0, 0.055), vertices=16)
-twine = bpy.context.active_object
-twine.name = "IconWheatTwine"
-twine.data.materials.append(MAT_TWINE)
-bpy.ops.object.shade_smooth()
-for o in (bundle, twine):
-    o.matrix_world = (Matrix.Translation((10.0, 0.0, 0.0)) @ Matrix.Rotation(math.radians(-12), 4, "X") @
-                      Matrix.Rotation(math.radians(45), 4, "Y")) @ o.matrix_world
-
-# plantedWheat1: styled on the vanilla corn seed icon (a loose cluster of
-# ~20 big, individually readable kernels), with a wheat ear lying diagonally
-# BEHIND the grains (stalk lower left, ear upper right). The grains are a warm
-# reddish brown and the ear a pale straw gold, so the two contrast.
-GRAIN_SHADES = [make_material(f"IconGrain{i}", rgb, 0.45) for i, rgb in enumerate(
-    [(0.62, 0.38, 0.17), (0.54, 0.32, 0.13), (0.69, 0.45, 0.21)])]
-bm = bmesh.new()
-rng = random.Random(62)
-placed = []
-attempts = 0
-while len(placed) < 24 and attempts < 5000:   # capped so it can never loop forever
-    attempts += 1
-    p = Vector((rng.uniform(-0.048, 0.048), rng.uniform(-0.026, 0.026), 0.0))
-    if (p.x / 0.048) ** 2 + (p.y / 0.026) ** 2 > 1.0:
-        continue
-    # Stack a second layer near the middle, like the corn kernels.
-    p.z = 0.006 + (0.009 if (abs(p.x) < 0.028 and rng.random() < 0.55) else 0.0)
-    # Only grains in the same layer need to keep apart.
-    if any((p - q).length < 0.0115 and abs(p.z - q.z) < 0.004 for q in placed):
-        continue
-    placed.append(p)
-    geom = bmesh.ops.create_icosphere(bm, subdivisions=2, radius=1.0)
-    verts = geom["verts"]
-    rot = (Matrix.Rotation(rng.uniform(0, math.pi), 4, "Z") @ Matrix.Rotation(rng.uniform(-0.35, 0.35), 4, "Y"))
-    # Wheat berry: an elongated oval, slightly flattened.
-    scale = Matrix.Diagonal((0.0125, 0.0068, 0.0058, 1.0))
-    bmesh.ops.transform(bm, matrix=Matrix.Translation(p) @ rot @ scale, verts=verts)
-    mi = rng.randrange(len(GRAIN_SHADES))
-    for f in {f for v in verts for f in v.link_faces}:
-        f.material_index = mi
-        f.smooth = True
-print(f"[wheat] seed icon: placed {len(placed)} grains in {attempts} attempts")
-grains = finish_object(bm, "IconWheatGrains", materials=GRAIN_SHADES)
-grains.location = (20.0, 0.0, 0.0)
-
-MAT_EAR_STRAW = make_material("IconEarStraw", (0.80, 0.64, 0.33), 0.6)
-bm = bmesh.new()
-uv_layer = bm.loops.layers.uv.new("UVMap")
-build_ear(bm, uv_layer, Vector((0, 0, 0)), 0.025, 2, radius=0.0045,
-          head=dict(head_len=0.095, kernel_scale=1.8, awn_len=0.035))
-seed_ear = finish_object(bm, "IconSeedEar", materials=(MAT_PLANT, MAT_GRAIN_GREEN, MAT_EAR_STRAW))
-# Lie it flat (Y 90) pointing +X, then turn it so the ear heads back and right,
-# sitting just behind the grain cluster.
-seed_ear.matrix_world = (Matrix.Translation((19.955, 0.022, 0.006)) @
-                         Matrix.Rotation(math.radians(22), 4, "Z") @
-                         Matrix.Rotation(math.radians(90), 4, "Y"))
-
-# Icon lighting: key top left, fill right, Standard view transform.
-for o in lights:
-    o.hide_render = True
-lights = []
-for name, energy, rot in (("IconKey", 4.5, (40, 0, -40)), ("IconFill", 1.8, (60, 0, 120))):
-    light = bpy.data.objects.new(name, bpy.data.lights.new(name, "SUN"))
-    light.data.energy = energy
-    light.data.angle = math.radians(10)
-    light.rotation_euler = tuple(math.radians(a) for a in rot)
-    scene.collection.objects.link(light)
-    lights.append(light)
-bg.inputs["Strength"].default_value = 1.2
-scene.render.film_transparent = True
-scene.render.image_settings.color_mode = "RGBA"
-scene.view_settings.view_transform = "Standard"
-cam_data.type = "ORTHO"
-
-ICONS = [
-    ("resourceCropWheat", [bundle, twine], (0.0, -1.0, 0.18)),
-    ("plantedWheat1", [grains, seed_ear], (0.15, -1.0, 0.85)),
-]
-for icon_name, objs, view_dir in ICONS:
-    show_only(objs)
-    coords = [o.matrix_world @ v.co for o in objs for v in o.data.vertices]
-    forward = -Vector(view_dir).normalized()
-    rot = forward.to_track_quat("-Z", "Y")
-    right = rot @ Vector((1, 0, 0))
-    up = rot @ Vector((0, 1, 0))
-    xs = [c.dot(right) for c in coords]
-    ys = [c.dot(up) for c in coords]
-    mid = right * (min(xs) + max(xs)) / 2 + up * (min(ys) + max(ys)) / 2
-    depth = sum(c.dot(forward) for c in coords) / len(coords)
-    cam.location = mid + forward * depth - forward * 5.0
-    cam.rotation_euler = rot.to_euler()
-    cam_data.ortho_scale = max(max(xs) - min(xs), max(ys) - min(ys)) * 1.06
-    render(os.path.join(ICON_DIR, f"{icon_name}.png"), 160, 160)
-    render(os.path.join(PREVIEW_DIR, f"icon_{icon_name}.png"), 160, 160)
-    render(os.path.join(PREVIEW_DIR, f"icon_{icon_name}_small.png"), 56, 56)
-
-scene.render.film_transparent = False
-scene.view_settings.view_transform = "AgX"
 for o in scene.objects:
     o.hide_render = False
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "wheat.blend"))

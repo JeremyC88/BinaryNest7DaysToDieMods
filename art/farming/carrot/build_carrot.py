@@ -1,17 +1,16 @@
 """
-Builds the carrot models and icons for Adapting Farming.
+Builds the carrot models for Adapting Farming.
+(Inventory icons are made separately with ChatGPT; see docs/guides/art-guide.md.)
 
 Run headless from the repo root:
     blender --background --factory-startup --python art/farming/carrot/build_carrot.py
 
 Outputs:
     art/farming/carrot/carrot.blend            source scene
-    art/farming/carrot/previews/*.png          preview renders (incl. icon copies)
+    art/farming/carrot/previews/*.png          preview renders
     unity/BinaryNestModAssets/Assets/Farming/Carrot/
         Models/Carrot<Stage>.fbx               one model per growth stage
         Textures/CarrotLeaf.png                leaf texture (4 green variants)
-    Mods/BinaryNest_Farming/UIAtlases/ItemIconAtlas/
-        foodCropCarrot.png, plantedCarrot1.png 160x160 inventory icons
 
 Scale: 1 Blender unit = 1 metre = 1 game block. Each model's origin is where
 the plant meets the soil.
@@ -30,9 +29,8 @@ REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 UNITY_CARROT = os.path.join(REPO, "unity", "BinaryNestModAssets", "Assets", "Farming", "Carrot")
 EXPORT_DIR = os.path.join(UNITY_CARROT, "Models")
 TEXTURE_DIR = os.path.join(UNITY_CARROT, "Textures")
-ICON_DIR = os.path.join(REPO, "Mods", "BinaryNest_Farming", "UIAtlases", "ItemIconAtlas")
 PREVIEW_DIR = os.path.join(HERE, "previews")
-for d in (EXPORT_DIR, TEXTURE_DIR, ICON_DIR, PREVIEW_DIR):
+for d in (EXPORT_DIR, TEXTURE_DIR, PREVIEW_DIR):
     os.makedirs(d, exist_ok=True)
 
 STAGES = [
@@ -312,56 +310,12 @@ def build_stage(cfg, lod_index=0):
     return finish_object(bm, f"{cfg['name']}_LOD{lod_index}")
 
 
-def build_whole_carrot(name, seed, length=0.20, radius=0.028, fronds=5, frond_length=(0.10, 0.14)):
-    """A pulled carrot (root + leafy top). Leaves point up +Z, tip down -Z."""
-    rng = random.Random(seed)
-    bm = bmesh.new()
-    uv_layer = bm.loops.layers.uv.new("UVMap")
-    add_root(bm, radius, length, 0.0, sides=16, rings_n=12, rng=rng)
-    for i in range(fronds):
-        az = 2 * math.pi * i / fronds + rng.uniform(-0.3, 0.3)
-        add_frond(bm, uv_layer, rng, az, rng.uniform(*frond_length), 2)
-    return finish_object(bm, name)
-
-
-MAT_SEEDS = [make_material(f"CarrotSeed{i}", rgb, 0.7) for i, rgb in enumerate(
-    [(0.62, 0.48, 0.30), (0.55, 0.41, 0.25), (0.70, 0.56, 0.36)])]
-
-
-def build_seed_pile(name, seed, count=110, pile_radius=0.05, seed_radius=0.0065):
-    """A heap of small round, pale tan seeds (carrot seeds) for the seed icon."""
-    rng = random.Random(seed)
-    bm = bmesh.new()
-    for _ in range(count):
-        r = pile_radius * math.sqrt(rng.random())
-        a = rng.uniform(0, 2 * math.pi)
-        height = (1.0 - r / pile_radius) ** 1.1 * pile_radius * 0.8
-        z = rng.uniform(0.3, 1.0) * height + seed_radius * 0.5
-        geom = bmesh.ops.create_icosphere(bm, subdivisions=2, radius=seed_radius)
-        verts = geom["verts"]
-        rot = (Matrix.Rotation(rng.uniform(0, math.pi), 4, "Z") @
-               Matrix.Rotation(rng.uniform(-0.6, 0.6), 4, "X"))
-        scale = Matrix.Diagonal((1.0, rng.uniform(0.8, 0.95), rng.uniform(0.55, 0.7), 1.0))
-        bmesh.ops.transform(bm, matrix=Matrix.Translation((math.cos(a) * r, math.sin(a) * r, z)) @ rot @ scale, verts=verts)
-        mat_index = rng.randrange(len(MAT_SEEDS))
-        for f in {f for v in verts for f in v.link_faces}:
-            f.material_index = mat_index
-            f.smooth = True
-    mesh = bpy.data.meshes.new(name)
-    bm.to_mesh(mesh)
-    bm.free()
-    obj = bpy.data.objects.new(name, mesh)
-    for m in MAT_SEEDS:
-        obj.data.materials.append(m)
-    scene.collection.objects.link(obj)
-    return obj
-
 
 # --------------------------------------------------------------------------
 # Build and export the growth stages
 # --------------------------------------------------------------------------
 stage_lods = {cfg["name"]: [build_stage(cfg, i) for i in range(len(LODS))] for cfg in STAGES}
-models = [lods[0] for lods in stage_lods.values()]   # LOD0s, used for previews and icons
+models = [lods[0] for lods in stage_lods.values()]   # LOD0s, used for previews
 all_lod_objects = [o for lods in stage_lods.values() for o in lods]
 
 # One FBX per stage holding <Stage>_LOD0.._LOD2. Unity groups them by suffix.
@@ -425,11 +379,8 @@ def render(path, res_x, res_y):
     print(f"[carrot] rendered {path}")
 
 
-icon_lights = []
-
-
 def show_only(objs):
-    keep = set(objs) | {cam, sun} | set(icon_lights)
+    keep = set(objs) | {cam, sun}
     for o in scene.objects:
         o.hide_render = o not in keep
 
@@ -467,80 +418,7 @@ cam_data.lens = 50
 aim((0.0, 30.0 - 4.2, 1.5), (0.0, 30.0, 0.12))
 render(os.path.join(PREVIEW_DIR, "carrot_harvest_lods.png"), 1500, 600)
 
-# --- Icons: transparent background, orthographic, fitted -----------------
-# Icons are shown small in the game, so: one clear subject, filling the square,
-# brightly lit, with the crop's colour easy to spot.
-
-# foodCropCarrot: one big carrot on a diagonal (leaves top right, tip bottom
-# left), like the vanilla corn icon. Short leafy top so the orange root leads.
-icon_carrot = build_whole_carrot("IconCarrot", 101, length=0.24, radius=0.042,
-                                 fronds=6, frond_length=(0.08, 0.10))
-icon_carrot.matrix_world = (Matrix.Translation((10.0, 0.0, 0.0)) @
-                            Matrix.Rotation(math.radians(-12), 4, "X") @
-                            Matrix.Rotation(math.radians(45), 4, "Y"))
-
-# plantedCarrot1 (Carrot Seeds): a heap of small round pale seeds with one small
-# carrot in front, like the vanilla blueberry seeds (seed heap + berries).
-seed_pile = build_seed_pile("IconSeedPile", 303, count=140)
-seed_pile.location = (20.0, 0.0, 0.0)
-seed_carrot = build_whole_carrot("IconSeedCarrot", 404, length=0.09, radius=0.016,
-                                 fronds=4, frond_length=(0.018, 0.024))
-# Lying side-on in front of the heap: green top to the left, tip to the right.
-seed_carrot.matrix_world = (Matrix.Translation((20.0, -0.055, 0.014)) @
-                            Matrix.Rotation(math.radians(-12), 4, "Z") @
-                            Matrix.Rotation(math.radians(-95), 4, "Y"))
-
-# Brighter, softer light for icons: key from top left, fill from the right.
-for name, energy, rot in (("IconKey", 4.5, (40, 0, -40)), ("IconFill", 1.8, (60, 0, 120))):
-    light = bpy.data.objects.new(name, bpy.data.lights.new(name, "SUN"))
-    light.data.energy = energy
-    light.data.angle = math.radians(10)
-    light.rotation_euler = tuple(math.radians(a) for a in rot)
-    scene.collection.objects.link(light)
-    icon_lights.append(light)
-sun.hide_render = True
-keep_sun = sun
-sun = icon_lights[0]  # show_only keeps 'sun'; point it at the key light for icons
-bg.inputs["Strength"].default_value = 1.2
-
-scene.render.film_transparent = True
-scene.render.image_settings.color_mode = "RGBA"
-scene.view_settings.view_transform = "Standard"
-cam_data.type = "ORTHO"
-
-ICONS = [
-    ("foodCropCarrot", [icon_carrot], (0.0, -1.0, 0.18)),
-    ("plantedCarrot1", [seed_pile, seed_carrot], (0.15, -1.0, 0.65)),
-]
-depsgraph = bpy.context.evaluated_depsgraph_get()
-for icon_name, objs, view_dir in ICONS:
-    show_only(objs)
-    coords = []
-    for o in objs:
-        # Fit to the real vertices: a rotated bounding box is far bigger than the object.
-        coords += [o.matrix_world @ v.co for v in o.data.vertices]
-    # Frame by projecting the vertices onto the camera's right/up axes.
-    forward = -Vector(view_dir).normalized()
-    rot = forward.to_track_quat("-Z", "Y")
-    right = rot @ Vector((1, 0, 0))
-    up = rot @ Vector((0, 1, 0))
-    xs = [c.dot(right) for c in coords]
-    ys = [c.dot(up) for c in coords]
-    mid = right * (min(xs) + max(xs)) / 2 + up * (min(ys) + max(ys)) / 2
-    depth = sum((c.dot(forward) for c in coords)) / len(coords)
-    cam.location = mid + forward * depth - forward * 5.0
-    cam.rotation_euler = rot.to_euler()
-    cam_data.ortho_scale = max(max(xs) - min(xs), max(ys) - min(ys)) * 1.06
-    render(os.path.join(ICON_DIR, f"{icon_name}.png"), 160, 160)
-    render(os.path.join(PREVIEW_DIR, f"icon_{icon_name}.png"), 160, 160)
-    # Also check how it reads at inventory-slot size.
-    render(os.path.join(PREVIEW_DIR, f"icon_{icon_name}_small.png"), 56, 56)
-
-sun = keep_sun
-
 # Leave the file in an editable state
-scene.render.film_transparent = False
-scene.view_settings.view_transform = "AgX"
 for o in scene.objects:
     o.hide_render = False
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "carrot.blend"))

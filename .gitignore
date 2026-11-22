@@ -6,3 +6,6 @@
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Python bytecode cache
+__pycache__/
